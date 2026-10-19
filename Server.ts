@@ -1057,7 +1057,7 @@ export namespace Chat {
   // what a turn's call is billed as, from the messages it had when the
   // chat moved: none, if it moved before its first was logged (a turn's
   // sent is empty from its start until the call takes them, and the chat
-  // moves as soon as it has no post: reading sent[0] there was a TypeError
+  // moves as soon as it has no post: reading its first message there was a TypeError
   // that could take the worker that had just taken the chat)
   export function billed(mem: Memory, sent: Msg[]): Bill | undefined {
     return sent.length === 0 ? undefined : mem.pay?.("chat", String(sent[0].id));

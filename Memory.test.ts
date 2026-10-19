@@ -132,6 +132,20 @@ test("the goal and the pick are the chat's: they come back on the next open", ()
   expect(again.warn).toBeUndefined();
 });
 
+test("opening a store that changed nothing writes nothing (a save renames a file into place)", () => {
+  const dir = dir_new();
+  const mem = mem_new(dir);
+  say(mem, "kept");
+  mem.goal = "unchanged";
+  Memory.save(mem);
+  const file = dir + "/view.json";
+  const inode = fs.statSync(file).ino;
+  const again = mem_new(dir);
+  expect(again.count).toBe(1);
+  // a save writes view.json.new and renames it over: same bytes, new inode
+  expect(fs.statSync(file).ino).toBe(inode);
+});
+
 test("a line a crash cut short is skipped, not fatal, and the chat goes on", () => {
   const dir = dir_new();
   const mem = mem_new(dir);

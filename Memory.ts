@@ -1292,7 +1292,9 @@ h4 { margin: .8em 0 .2em; color: #888; font-weight: normal; } pre { margin: 0; w
   // message names (a GC's, never a fault)
   export function faults(dir: string): { faults: Fault[]; orphans: string[]; notes: string[] } {
     const out: Fault[] = [];
-    const mem = { dir, fds: new Map() } as unknown as Memory;
+    // a Memory to read with, not a chat: Memory.node asks the kept lines
+    // first (the map is empty here) and then the tree's log
+    const mem = { dir, fds: new Map(), nodes: new Map() } as unknown as Memory;
     const { kept, bad } = Memory.saved(dir);
     if (bad) {
       out.push({ where: "view.json", why: "unreadable: the chat rebuilds its view, and its pick and goal are lost" });
@@ -1304,7 +1306,9 @@ h4 { margin: .8em 0 .2em; color: #888; font-weight: normal; } pre { margin: 0; w
     const notes: string[] = [];
     if (kept?.geometry !== undefined) {
       const now = Memory.geometry();
-      const said = ["node", "high", "seen"].filter((key) => (kept.geometry as any)[key] !== (now as any)[key]).map((key) => key + " " + (kept.geometry as any)[key] + " → " + (now as any)[key]);
+      const said = (["node", "high", "seen"] as const)
+        .filter((key) => kept.geometry![key] !== now[key])
+        .map((key) => key + " " + kept.geometry![key] + " → " + now[key]);
       if (said.length > 0) {
         notes.push("its lines were written with " + said.join(", ") + ": lines from both geometries sit together");
       }

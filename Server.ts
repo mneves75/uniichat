@@ -1551,11 +1551,13 @@ export namespace Main {
     const mem = chat.mem;
     switch (p) {
       case "/tree": {
+        // Bun takes an async generator as a body; its Response type does not say so
         return new Response(Main.stream(Memory.page(mem)) as unknown as BodyInit, { headers: { "content-type": "text/html; charset=utf-8" } });
       }
       case "/export": {
         const name = "unii-memory-" + new Date().toISOString().slice(0, 10) + ".json";
         const json = { "content-type": "application/json", "content-disposition": 'attachment; filename="' + name + '"' };
+        // as above: a generator, streamed (the export is never held whole)
         return new Response(Main.stream(Memory.dump(mem, await Cloud.data(Chat.cloud, user))) as unknown as BodyInit, { headers: json });
       }
       case "/api/act": {

@@ -75,6 +75,8 @@ export function clip_page(str: string, at: number): string {
 // a byte stream's lines, those of each read whole (one cut short waits
 // for the next read; the stream's last comes last, "" if it ends one)
 export async function* stream_lines(stream: ReadableStream<Uint8Array>): AsyncGenerator<string[]> {
+  // Bun's TextDecoderStream type is narrower than the DOM's transform it is:
+  // the cast says the stream goes from bytes to text, which is what it does
   const reader = stream.pipeThrough(new TextDecoderStream() as unknown as TransformStream<Uint8Array, string>).getReader();
   let rest = "";
   for (let got = await reader.read(); !got.done; got = await reader.read()) {

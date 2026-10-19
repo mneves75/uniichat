@@ -6,6 +6,9 @@
 > C5 partly (log/tiling/slots/version/corruption/torn line/search/faults/geometry — no SIGKILL
 > suite), C8 (`Agent.gate`), D2 (`/health`), D4 (release artifacts with checksums),
 > E1 (`search`, with newest-first from the literature pass), E3 (the site, as design).
+> **Where it is:** committed and pushed to the fork `mneves75/uniichat` (the
+> upstream `VictorTaelin/UniiChat` is not mine to push to); not merged upstream,
+> not tagged, not deployed.
 > **Not done:** C6 (render goldens), C7 (wire replay), D1 (structured logs), D3 (handover under
 > load), E2 (recall harness), E4 (iOS decision). The advisor's ordering puts C6 and E2 first:
 > C6 guards the CSS surface, E2 guards any further prompt revision. §9's "the prompt already

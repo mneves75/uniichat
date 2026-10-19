@@ -258,3 +258,51 @@ test("a store records the geometry and prompt revision its lines were written wi
   expect(found.faults).toEqual([]);
   expect(found.notes.join(" ")).toContain("node 1024");
 });
+
+// The view of any chat old enough to have merged a line has parts at level
+// 1 or above. Doctor, Backup and Gc all read through Memory.faults, and a
+// reader there without its nodes map threw on exactly those stores: every
+// real chat, and none of the fixtures here until this one.
+test("a store whose view has a merged line is read, not crashed on", () => {
+  const dir = dir_new();
+  const mem = mem_new(dir);
+  say(mem, "first");
+  say(mem, "second");
+  Memory.store(mem, [
+    { l: 0, i: 0, text: "user: first" },
+    { l: 0, i: 1, text: "user: second" },
+    { l: 1, i: 0, text: "user: first; user: second" },
+  ]);
+  mem.view.parts = [{ l: 1, i: 0 }];
+  mem.view.size = 30;
+  Memory.save(mem);
+  const found = Memory.faults(dir);
+  expect(found.faults).toEqual([]);
+  // and the nodes it names are there, so a missing one is still caught
+  expect(found.notes).toEqual([]);
+  const fd = fs.openSync(dir + "/tree.index", "r+");
+  fs.writeSync(fd, Buffer.alloc(16), 0, 16, Memory.slot(0, 1) * 16);
+  fs.closeSync(fd);
+  expect(Memory.faults(dir).faults.map((fault) => fault.where)).toContain("tree 0/1");
+});
+
+test("doctor and backup work on a chat with a merged view (the CLI, not just the reader)", () => {
+  const dir = dir_new();
+  const mem = mem_new(dir);
+  say(mem, "first");
+  say(mem, "second");
+  Memory.store(mem, [
+    { l: 0, i: 0, text: "user: first" },
+    { l: 0, i: 1, text: "user: second" },
+    { l: 1, i: 0, text: "user: first; user: second" },
+  ]);
+  mem.view.parts = [{ l: 1, i: 0 }];
+  Memory.save(mem);
+  const doctor = Bun.spawnSync([process.execPath, import.meta.dir + "/Doctor.ts", dir], { stdout: "pipe", stderr: "pipe" });
+  expect(doctor.exitCode).toBe(0);
+  expect(doctor.stdout.toString() + doctor.stderr.toString()).not.toContain("TypeError");
+  const to = dir_new() + "/u";
+  const saved = Bun.spawnSync([process.execPath, import.meta.dir + "/Backup.ts", "save", dir, to], { stdout: "pipe", stderr: "pipe" });
+  expect(saved.exitCode).toBe(0);
+  expect(saved.stdout.toString()).toContain("2 messages");
+});

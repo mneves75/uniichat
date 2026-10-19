@@ -228,6 +228,65 @@ export namespace Agent {
   // request holds at a time while the rest wait on it, so each import
   // has one request at a busy model however many it runs, and imports
   // share its room alike
+  // how many requests one model runs at once in this process, over every
+  // chat: an importing chat runs JOBS a side and asks for its next only
+  // after the last (Memory.starts), so without this a deploy of a few
+  // imports opened hundreds of paid requests at once, and only the vendor's
+  // 429 said so. A turn's request is never behind an import's
+  export const CAP = 8;
+
+  // a model's places: those free, and the requests waiting for one (a
+  // turn's before an import's, then in the order they came)
+  type Seat = { free: number; wait: Array<{ on: () => void; low: boolean }> };
+  const GATES = new Map<string, Seat>();
+
+  // a place at `model` for one request (`low`: an import's, which waits
+  // behind every turn's); answers the way to give it back, which runs once
+  export async function gate(model: string, low: boolean, signal: AbortSignal): Promise<() => void> {
+    const seat = GATES.get(model) ?? { free: CAP, wait: [] };
+    GATES.set(model, seat);
+    let took = false;
+    if (seat.free > 0) {
+      seat.free -= 1;
+      took = true;
+    } else {
+      const entry = { low, on: () => {} };
+      await new Promise<void>((ok) => {
+        const stop = () => {
+          const at = seat.wait.indexOf(entry);
+          if (at >= 0) {
+            seat.wait.splice(at, 1);
+          }
+          ok();
+        };
+        entry.on = () => {
+          took = true;
+          signal.removeEventListener("abort", stop);
+          ok();
+        };
+        seat.wait.push(entry);
+        signal.addEventListener("abort", stop, { once: true });
+      });
+    }
+    let given = false;
+    return () => {
+      if (given) {
+        return;
+      }
+      given = true;
+      if (!took) {
+        return;
+      }
+      const at = seat.wait.findIndex((waiting) => !waiting.low);
+      const next = seat.wait.splice(at < 0 ? 0 : at, 1)[0];
+      if (next === undefined) {
+        seat.free += 1;
+      } else {
+        next.on();
+      }
+    };
+  }
+
   export async function step<S>(wire: Wire<S>, run: Run, key: string, make: (max: number) => unknown, items: Item[]): Promise<Step> {
     const body = make(MAX);
     const cost = Agent.worst(run.ask, JSON.stringify(body), items, () => wire.count(key, run.ask, body));
@@ -238,10 +297,16 @@ export namespace Agent {
     try {
       for (let k = 1; !signal.aborted; k++) {
         await Agent.yielded(run, own, asking);
+        const seat = await Agent.gate(model, run.ask.yields !== undefined, signal);
         const seen: Entry[] = [];
-        const sent = Agent.request(wire, run, key, make, cost, seen);
-        const stopped = new Promise<null>((done) => signal.addEventListener("abort", () => done(null), { once: true }));
-        const got = await Promise.race([sent, stopped]);
+        let got: { res: Response | null; step: Step } | null;
+        try {
+          const sent = Agent.request(wire, run, key, make, cost, seen);
+          const stopped = new Promise<null>((done) => signal.addEventListener("abort", () => done(null), { once: true }));
+          got = await Promise.race([sent, stopped]);
+        } finally {
+          seat();
+        }
         if (got === null) {
           return Agent.fail("stopped", seen);
         }
@@ -274,8 +339,7 @@ export namespace Agent {
 
   export function room(key: string): Room {
     const room = ROOMS.get(key) ?? { busy: 0, asking: 0, wait: [] };
-    ROOMS.set(key, room);
-    return room;
+    ROOMS.set(key, room);    return room;
   }
 
   // a request asks `model` again, holding `own`, its model's room or its

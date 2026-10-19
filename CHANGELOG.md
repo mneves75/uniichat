@@ -39,11 +39,12 @@
   deployment); from anywhere else the socket's peer address is used.
 - **The site**, as design rather than polish: one cool-neutral palette with no
   decorative hue (the brand name is ink), `--soft` raised to 5.2:1 because it
-  carries real labels, a 68-character measure that now actually applies, the
-  memory's face at the message's size, `text-wrap: balance` only where a line
-  or two is all there is, a writing-surface composer with a soft focus state,
-  and 44px targets on a touch screen. `Style.test.ts` fails on a custom
-  property declared twice in one scope (the way a measure can be dead).
+  carries real labels, a ~68-character measure (`--col: 41rem`, where it was
+  740px), the memory's face at the message's size, `text-wrap: balance` only
+  where a line or two is all there is, a writing-surface composer with a soft
+  focus state, and 44px targets on a touch screen. `Style.test.ts` fails on a
+  custom property declared twice in one scope: this change's own first attempt
+  at `--col` was dead that way, overridden by the `:root` that set it first.
 
 ### Fixed
 

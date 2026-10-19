@@ -30,6 +30,8 @@ function chat_new() {
   const cloud = Cloud.open(() => {}, () => {}, async () => null);
   const mem = Memory.load(dir, share);
   mem.hold = ["test", "paused"];
+  // a chat is a record of processes' state; an act that only sets state
+  // needs the store, the account and a socket set, and nothing else
   const chat = { acct: { cloud, user: "u" }, mem, socks: new Set(), held: null, acts: new Map(), posts: 0, busy: false } as unknown as Parameters<typeof Chat.apply>[0];
   return { chat, dir };
 }
@@ -65,6 +67,7 @@ test("an act with no goal text is refused, and the chat's goal is left as it was
 
 test("a turn that moved before its first message was logged bills nothing", () => {
   const billed: string[] = [];
+  // only `pay` is read by Chat.billed: a wallet, not a store
   const mem = { pay: (_kind: string, what: string) => (billed.push(what), () => Promise.resolve({ max: 0, cut: null, end: () => {} })) } as unknown as Memory;
   expect(Chat.billed(mem, [])).toBeUndefined();
   expect(billed).toEqual([]);

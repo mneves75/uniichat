@@ -19,6 +19,21 @@ function cloud_new() {
 
 afterAll(() => fs.rmSync(process.env.UNII_DIR ?? "", { recursive: true, force: true }));
 
+// A limit keyed on x-forwarded-for is keyed on the client's own word: only
+// a proxy on this machine is believed, and from anywhere else the socket's
+// peer address is what a request is limited by.
+test("Cloud.ip: the peer's address unless the peer is this machine's proxy", () => {
+  const forged = () => new Request("http://127.0.0.1/", { headers: { "x-forwarded-for": "1.2.3.4" } });
+  const remote = forged();
+  Cloud.peer.set(remote, "203.0.113.9");
+  expect(Cloud.ip(remote)).toBe("203.0.113.9");
+  const local = forged();
+  Cloud.peer.set(local, "127.0.0.1");
+  expect(Cloud.ip(local)).toBe("1.2.3.4");
+  const bare = forged();
+  expect(Cloud.ip(bare)).toBe("1.2.3.4");
+});
+
 test("Cloud.net: IPv4 whole, IPv6 by its /48", () => {
   expect(Cloud.net("1.2.3.4")).toBe("1.2.3.4");
   expect(Cloud.net("::ffff:1.2.3.4")).toBe("1.2.3.4");

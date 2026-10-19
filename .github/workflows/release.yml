@@ -1,0 +1,60 @@
+# Release
+# =======
+# A tag `v*` builds `unii` for the four platforms the installer serves and
+# publishes them with the installer and its checksum, which is what
+# `unii update` verifies before it runs anything (`Term.ts update_run`).
+#
+# Run by hand from Actions to test the build without publishing: the
+# artifacts are uploaded to the run instead of a release.
+name: release
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [bun-darwin-arm64, bun-darwin-x64, bun-linux-x64, bun-linux-arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .tool-versions
+      - run: bun install --frozen-lockfile
+      - name: build
+        run: bun build --compile --target=${{ matrix.target }} Term.ts --outfile unii-${{ matrix.target }}
+      - name: checksum
+        run: sha256sum "unii-${{ matrix.target }}" > "unii-${{ matrix.target }}.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unii-${{ matrix.target }}
+          path: |
+            unii-${{ matrix.target }}
+            unii-${{ matrix.target }}.sha256
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: the installer and its checksum, as `unii update` reads them
+        run: |
+          cp web/install.sh dist/install.sh
+          (cd dist && sha256sum install.sh > install.sh.sha256)
+      - name: publish
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "$GITHUB_REF_NAME" \
+            --notes "unii $GITHUB_REF_NAME. Binaries and the installer carry their sha256: \`unii update\` refuses an installer that does not match the checksum published beside it."

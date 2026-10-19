@@ -10,6 +10,7 @@ store per user under `$UNII_DIR`. `README.md` says how to run it.
 bun run check    # tsc --noEmit, strict
 bun run test     # bun test --isolate
 bun Doctor.ts    # a store's files: view tiles, nodes exist, images present
+bun Backup.ts save <chat> <to>   # a checked snapshot (restore into an empty dir)
 ```
 
 CI (`.github/workflows/ci.yml`) runs the first two, and rebuilds
@@ -32,7 +33,10 @@ means changing its spec, its `Call.ts` line, its `Theme.ts` glyph, its
 - **Never edit or delete a store's `chat/` history, `main/` or `tree/`.**
   The log is the memory. Add, never rewrite.
 - **A store's format change needs a `STORE` bump** (`Memory.ts`), and a
-  refusal for newer stores before an old one half-reads a new chat.
+  refusal for newer stores before an old one half-reads a new chat. A change
+  to how lines are written (their size, the view's, the prompt that
+  summarises them) is recorded in `view.json`'s `geometry`, not refused:
+  `Doctor.ts` reports a store that mixes two.
 - **Absence is not corruption.** A file that does not exist and a file that
   will not parse are different facts (`Memory.saved`); the second is moved
   aside and reported, never overwritten.
@@ -43,6 +47,9 @@ means changing its spec, its `Call.ts` line, its `Theme.ts` glyph, its
   stores of its own, under `mkdtemp`, and removes them.
 - **No panic on input.** Acts arrive from any client: a field that is
   missing is refused with a message (`goal`), never `String(undefined)`.
+- **`web/style.css` has its own test** (`Style.test.ts`): a custom property
+  declared twice in one scope silently wins by order, which is how a
+  redesigned measure can be dead on arrival. Keep it passing.
 - **Types are checked now.** A cast is allowed only with a comment saying
   why (Bun's `*.html` type, a stream body), never to quiet a real mismatch.
 

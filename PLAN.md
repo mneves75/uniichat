@@ -1,18 +1,15 @@
 # UniiChat — review and improvement plan
 
-> **Status (implemented on `improve/review-plan`, v1.1.0).** Landed: A1 (view.json
-> corruption is loud, moved aside, and never overwritten), A2 (8-digit code, constant-time
-> compare, 5 tries a ticket), A3 (goal validated and capped), A4 (body cap 1 GiB), A5
-> (`turn.sent` guard + `Main.event` around the handover), B1 (tsconfig, strict, `bun run
-> check`), B2 (CI: types, tests, bundle), B3 (Bun pinned, lockfile), C1 (store version), C2
-> partly (`Memory.faults` + `Doctor.ts`; no `--deep` walk), C5 partly (log/tiling/slots/store
-> version/corruption/torn line/search/faults — no SIGKILL suite), C8 (`Agent.gate`: per-model
-> cap, turns before imports, abort-safe), D2 (`/health`), E1 (`search` + prompt + Call/Theme),
-> E3 partly (focus ring, roles, reduced motion, theme-color; verified in a real render).
-> **Not done:** A6 (installer checksum), B4 (non-spoofable network key), C3 (backup/restore),
-> C4 (`unii gc`; doctor only reports orphans), C6 (render goldens), C7 (wire replay), D1
-> (structured logs), D3 (handover under load), D4 (release workflow), E2 (tuning harness), E4
-> (iOS decision). Each is still the next thing on its line below.
+> **Status (v1.2.0).** Landed: A1-A5, A6 (installer checksum published and verified),
+> B1-B4 (tsconfig, CI, Bun pin, non-forgeable limit key), C1 (store version + geometry),
+> C2 (`Memory.faults` + `Doctor.ts`), C3 (`Backup.ts` save/restore), C4 (`Gc.ts`, images only),
+> C5 partly (log/tiling/slots/version/corruption/torn line/search/faults/geometry — no SIGKILL
+> suite), C8 (`Agent.gate`), D2 (`/health`), D4 (release artifacts with checksums),
+> E1 (`search`, with newest-first from the literature pass), E3 (the site, as design).
+> **Not done:** C6 (render goldens), C7 (wire replay), D1 (structured logs), D3 (handover under
+> load), E2 (recall harness), E4 (iOS decision). The advisor's ordering puts C6 and E2 first:
+> C6 guards the CSS surface, E2 guards any further prompt revision. §9's "the prompt already
+> says the latest word wins" is corrected there.
 
 
 Reviewed commit: `0500bf6` ("UniiChat", the only commit).
@@ -403,3 +400,74 @@ an unverified pipe; the store version must carry the read contract.
 Rejected, because the reviewer was wrong: `view.json` **is** flushed (`Disk.wrote`,
 `Memory.ts:243`) — the defect is silent degradation, not durability; and the local-date/UTC path
 pair is self-consistent, not a timezone bug. Both were cut rather than softened.
+
+---
+
+## 9. Plan v2 — after the 2026 memory literature and the advisor pass
+
+Read for this revision (primary sources, 2026): *Context Collapse in Long-Horizon Agents*
+(hierarchical memory vs RAG vs summarization, SSRN 6976218), *Memora* (ACL 2026,
+arXiv 2604.20006 — recall **and** forgetting, over weeks-to-months), *RealMem* (ACL Findings
+2026), *AgentMemBench* (arXiv 2608.00009), *HiMem* (2601.06377) and *MemForest*
+(2605.23986, hierarchical **temporal** indexing), plus Anthropic's context-engineering
+guidance.
+
+Three things that changes, and one it does not:
+
+1. **The tree is validated; retrieval was the wrong place to stop.** Hierarchical,
+   temporal, summarising memory beats both truncation and flat RAG on long-horizon recall in
+   all of those papers. MemForest is the closest to this design and adds exactly what v1's
+   `search` added: a temporal read path over the raw log. So the priority is *more retrieval
+   affordances*, not a different memory.
+2. **Staleness, not forgetting, is the measured failure mode.** Memora credits agents for
+   *forgetting* superseded facts, and RealMem (project-oriented) finds agents keep answering
+   from an old value. UniiChat never forgets by design, so its exposure is the reverse: an
+   old line and its replacement sit side by side in the view and in `search`. Consequence,
+   and the cheapest fix in this document: **`search` must be able to answer "what is it
+   now"**, so it gains a newest-first option and says which end of the log it read. The
+   prompt already says the latest word wins; the tool now makes finding it cheap.
+3. **A recall metric is the only way to defend any of this.** v1's E2 (a replay harness) is
+   upgraded to a *recall* harness: a fixture chat with planted facts and later corrections,
+   answered by the real tools against a fake vendor, scoring recall@k and staleness. This is
+   the item that turns "better memory" into a number. It is not implemented here; it is the
+   first thing after this change.
+4. **Unchanged, deliberately:** no embeddings/RAG (the comparisons above are the evidence),
+   no forgetting of history (the product's premise), no curation UI. Those are the two
+   most tempting refactors and both would make UniiChat a different, worse product.
+
+### Revised order (what is done now, and what is next)
+
+Now: **B4** (a limit key that cannot be forged), **A6** (the installer verifies what it
+runs), **C3** (backup/restore: the store the product *is*), **C4** (`unii gc`: images and
+agent logs only), **D4** (release artifacts with checksums, which A6 verifies), the `search`
+recency option (from 2 above), and the site pass (E3, done as design now, not as polish).
+
+Next, in order: **E2** (recall harness, against fixtures modelled on Memora/RealMem), **C6**
+(render goldens), **C7** (wire replay), **D1** (structured logs), **D3** (handover under
+load), **E4** (the iOS decision).
+
+---
+
+## 10. What the advisor changed (plan v2, verified against the code)
+
+- **§9.2 was wrong about where staleness is fixed.** The "latest word wins" rule
+  lives under `# Turns` in `prompt.txt` and is *demoted* for the compactor, which is
+  the thing that writes memory. The fix is a supersession clause in the compaction
+  prompt (added in 1.2.0, awaiting E2's measurement), not the search tool.
+- **`newest` is not cosmetic, for a different reason than claimed:** `limit` is capped
+  at 100 with no cursor, so before it the newest matches of a common word were
+  unreachable. That is the bug it fixes.
+- **C3/C4 landed mid-review** and the status block said otherwise; fixed.
+- **A dead measure**: `--col: 41rem` was overridden by a later `:root` (`740px`), so the
+  redesigned measure never applied. `Style.test.ts` now fails on any custom property
+  declared twice in one scope.
+- **`--soft` carried 11.5-12.5 px text at 3.69:1**; raised to 5.2:1.
+- **Rejected but recorded:** vectors over the *immutable summary lines* (no re-embed
+  problem, ~600 KB for a 100k-message chat) are the one version of embeddings that
+  survives the objections — build them only if E2 shows paraphrase misses with a
+  BM25 control. Embeddings on the write path stay rejected.
+- **The five-year item adopted:** the version marker now carries the *write* geometry
+  and prompt revision, not just the read contract, so a re-tune is auditable.
+- **Disagreed, deliberately:** the advisor would remove the intro curtain and unfill
+  the summary blocks. The first is the author's identity; the second is parity with the
+  terminal (`Theme.ts`), which is a product decision, not a styling accident.

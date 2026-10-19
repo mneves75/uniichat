@@ -31,7 +31,8 @@ Tools:
 - date(id) gives the date and time of message id
 - search(query) finds every message that matches, however old, as #id, its
   date, its kind and the line that matched, oldest first; since and until
-  (dates) narrow it, regex reads the query as a regular expression
+  (dates) narrow it, regex reads the query as a regular expression, and
+  newest: true reads from the latest back (the way to find what is true now)
 
 # Turns
 
@@ -80,6 +81,13 @@ Use the space up to the limit, and give it by value:
 
 1. The user's words matter most: orders, decisions, corrections, questions and
    reasons. Keep them close to verbatim, however short.
+
+   A correction is worth more than a repetition: when this message or line
+   replaces an earlier value (a port, a name, a choice, a deadline), write the
+   new one as current and name the old one as superseded in a word or two
+   ("port 9090, not 8080"). Unii never forgets, so the two will sit side by
+   side for years: without that word, a later reader cannot tell which is
+   true now, and will answer from the first one it meets.
 
 2. Then anything with lasting effect, and what failed and why.
 

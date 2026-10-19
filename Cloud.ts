@@ -57,6 +57,9 @@ const KEEP = "; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000" + (config.SITE
 const ACTS = 7 * 864e5;
 
 const LINK    = 15 * 60 * 1000;
+
+// an address of this machine: a proxy's, whose forwarded-for is believed
+const LOOPBACK = /^(127\.|::1$|::ffff:127\.|0:0:0:0:0:0:0:1$)/;
 const WAIT    = 5 * 60 * 1000;
 // the codes a link's page takes before the link is spent: the code is 8
 // digits, and a wrong one never leaves the page free to try again
@@ -137,9 +140,21 @@ export namespace Cloud {
     return cloud.db.query("select id, name from sessions where id = ?").get(id) as User | null;
   }
 
+  // the address a request is limited by. A proxy on this machine (README's
+  // deployment: Caddy in front, so every peer is loopback) is the only one
+  // whose x-forwarded-for is believed, and then its leftmost address is the
+  // client's; from anywhere else the header is the client's own word, so
+  // the peer is the fact (Server.reply puts it here)
   export function ip(req: Request): string | null {
-    return req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? null;
+    const peer = Cloud.peer.get(req) ?? null;
+    if (peer !== null && !LOOPBACK.test(peer)) {
+      return peer;
+    }
+    return req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? peer;
   }
+
+  // the address a request came from, as the socket saw it
+  export const peer = new WeakMap<Request, string>();
 
   export function random(): string {
     return Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");

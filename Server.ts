@@ -1432,6 +1432,9 @@ export namespace Main {
   // supervisor sends for it, by id, awaiting answers
   export let leaving = false;
   export let count   = 1;
+  // the installer's sha256, published at /install.sh.sha256 when the
+  // process starts (`unii update` refuses one that is not this)
+  export let install_sha = "";
   export let index   = 0;
   export const mails = new Map<string, (err: string | null) => void>();
 
@@ -1489,6 +1492,9 @@ export namespace Main {
 
   // a site's file
   export function file(pathname: string): Response {
+    if (pathname === "/install.sh.sha256") {
+      return new Response(Main.install_sha + "  install.sh\n", { headers: { "content-type": "text/plain; charset=utf-8" } });
+    }
     const file = WEB[pathname];
     return file === undefined ? new Response("not found", { status: 404 }) : new Response(Bun.file(file));
   }
@@ -1581,6 +1587,10 @@ export namespace Main {
   // so no client (Caddy, another worker's Main.pass) keeps one to reuse as
   // the process ends
   export async function reply(req: Request, server: Bun.Server<Sock["data"]>): Promise<Response | undefined> {
+    const peer = server.requestIP(req)?.address;
+    if (peer !== undefined) {
+      Cloud.peer.set(req, peer);
+    }
     const res = await Main.http(req, server);
     if (res === undefined || !Main.given) {
       return res;
@@ -1727,6 +1737,7 @@ export namespace Main {
     const post = (mail: object) => (send === undefined ? Mail.send(config.KEYS.resend, mail) : Main.mail(send, mail));
     const hand = HAND + Main.index;
     Main.port = port;
+    Main.install_sha = new Bun.CryptoHasher("sha256").update(await Bun.file(install_sh).text()).digest("hex");
     Chat.cloud = Cloud.open(change, signed, post);
     Main.back = await Main.dial(hand);
     if (Main.back === null) {

@@ -11,42 +11,46 @@
    the dark glares; green, red and purple lighter and calmer, to keep
    their contrast */
 :root {
-  --ink    : #111111; /* text, frames */
-  --mid    : #5f5f5f; /* secondary text, levels */
-  --soft   : #9a9a9a; /* hints, placeholders */
-  --hair   : #e6e6e6; /* rules */
+  --ink    : #0d0d0f; /* text, frames */
+  --mid    : #55555c; /* secondary text, levels (7:1 on the paper) */
+  --soft   : #6c6c74; /* hints, placeholders (5.2:1 on the paper) */
+  --hair   : #e3e3e6; /* rules */
   --paper  : #ffffff; /* the page */
   --lift   : #ffffff; /* a box over the page: a popover, the message box */
-  --block  : #f2f2f2; /* a summary's, a tool's, a button's, code's fill */
-  --hover  : #e8e8e8; /* under the pointer, around the focus */
-  --frame  : #cccccc; /* a call's code's frame, a file's lines', the message box's */
-  --edge   : #111111; /* a person's frame: the user's message, a report */
-  --add    : #1a7f37; /* a diff's line added */
-  --del    : #cf222e; /* a diff's line dropped */
-  --accent : #6d3fd8; /* the name UniiChat in a message */
-  --red    : #b42318; /* deleting the account */
-  --veil   : rgb(0 0 0 / .3); /* the page behind a box over it */
-  --shadow : 0 1px 2px rgba(0, 0, 0, .05), 0 6px 20px rgba(0, 0, 0, .05);
-  --focus  : #111111; /* the ring on what the keyboard is on (2 px, offset) */
+  --block  : #f4f4f5; /* a summary's, a tool's, a button's, code's fill */
+  --hover  : #ebebee; /* under the pointer, around the focus */
+  --frame  : #d0d0d5; /* a call's code's frame, a file's lines', the message box's */
+  --edge   : #0d0d0f; /* a person's frame: the user's message, a report */
+  --add    : #10713a; /* a diff's line added (5.9:1 on the fill) */
+  --del    : #b3202c; /* a diff's line dropped */
+  --accent : var(--ink); /* the name UniiChat in a message: ink, not a hue */
+  --red    : #b3202c; /* deleting the account */
+  --veil   : rgb(0 0 0 / .32); /* the page behind a box over it */
+  --shadow : 0 1px 2px rgb(13 13 15 / .04), 0 8px 24px rgb(13 13 15 / .06);
+  --focus  : #0d0d0f; /* the ring on what the keyboard is on (2 px, offset) */
+  /* one rhythm for the whole page: 4 px steps, and a reading measure */
+  --step   : 4px;
+  --col    : 41rem; /* ~68 characters of the message face */
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --ink    : #e3e3e6;
-    --mid    : #a6a6ad;
-    --soft   : #8a8a92;
-    --hair   : #36363c;
-    --paper  : #171719;
-    --lift   : #222226;
-    --block  : #2c2c31;
-    --hover  : #37373d;
-    --frame  : #4c4c53;
-    --edge   : #85858d;
-    --add    : #55b874;
-    --del    : #f8857c;
-    --accent : #ad94ff;
+    --ink    : #e9e9ec;
+    --mid    : #a9a9b2;
+    --soft   : #8b8b94;
+    --hair   : #2b2b31;
+    --paper  : #111113;
+    --lift   : #1a1a1d;
+    --block  : #202024;
+    --hover  : #292930;
+    --frame  : #3c3c43;
+    --edge   : #a9a9b2;
+    --add    : #5cc47f;
+    --del    : #ff8a80;
+    --accent : var(--ink);
     --red    : var(--del);
-    --veil   : rgb(0 0 0 / .5);
+    --veil   : rgb(0 0 0 / .55);
     --shadow : 0 1px 2px rgb(0 0 0 / .4), 0 8px 28px rgb(0 0 0 / .45);
+    --focus  : #e9e9ec;
   }
 }
 
@@ -55,14 +59,13 @@
   --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --brand: "Avenir Next", Avenir, Futura, var(--sans);
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-  --col: 740px;
   --head: 57px; /* the header's height, where an open block's bar sticks */
 }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { color-scheme: light dark; -webkit-text-size-adjust: 100%; scrollbar-gutter: stable; overflow-anchor: none; }
-body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.55 var(--sans); font-optical-sizing: auto; font-kerning: normal; -webkit-font-smoothing: antialiased; font-synthesis-weight: none; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 /* the keyboard's place is always visible: a ring outside the edge, so it
    never moves the layout or hides under a frame (WCAG 2.4.11) */
@@ -71,9 +74,9 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 ::selection { background: var(--ink); color: var(--paper); }
 a { color: inherit; text-underline-offset: 3px; }
-/* no word left alone on a line: all text balanced (every browser keeps
-   it), but the prose of messages (not notes), pretty */
-body { text-wrap: balance; }
+/* no word left alone on a line: balance where a line or two is all there
+   is (a heading, a summary), pretty for the prose of a message */
+:is(h1, h2, .cap, .block) { text-wrap: balance; }
 .msg:not(.note) { text-wrap: pretty; }
 
 /* a guest's chat: only the log and the message box; a note alone (the
@@ -88,8 +91,9 @@ body.solo h1 { margin: 0; font: 400 46px/1.05 var(--serif); letter-spacing: -.01
 /* Header: the logo, then buttons: grey chips, no borders. It and the footer keep clear of a phone's notch and
    home bar (safe-area insets: the page is drawn under them) */
 header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 6px; height: var(--head); padding: 0 max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left)); background: var(--paper); border-bottom: 1px solid var(--hair); }
-header > button { height: 32px; padding: 0 12px; border-radius: 8px; background: var(--block); font-size: 13.5px; font-weight: 500; }
+header > button { height: 34px; padding: 0 12px; border-radius: 8px; background: var(--block); font-size: 13.5px; font-weight: 500; transition: background .12s ease-out; }
 header > button:hover { background: var(--hover); }
+@media (pointer: coarse) { header > button { height: 44px; } }
 header > .brand { margin-right: auto; display: flex; align-items: center; gap: 10px; height: auto; padding: 0; background: none; font: 600 20px/1 var(--brand); letter-spacing: -.01em; }
 header > .brand:hover { background: none; }
 /* the logo: its shape (mark.svg, the infinity cut out) filled with the
@@ -112,8 +116,9 @@ body.account footer > :not(#toast) { display: none; }
 #pick button:hover { background: var(--block); color: var(--ink); }
 #pick .dot { color: var(--soft); }
 
-.composer { width: min(var(--col), 100%); margin: 0 auto; display: flex; align-items: flex-end; gap: 10px; border: 1px solid var(--frame); border-radius: 24px; padding: 7px 7px 7px 20px; background: var(--lift); box-shadow: var(--shadow); }
-.composer:focus-within { border-color: var(--soft); }
+.composer { width: min(var(--col), 100%); margin: 0 auto; display: flex; align-items: flex-end; gap: 8px; border: 1px solid var(--frame); border-radius: 14px; padding: 6px 6px 6px 16px; background: var(--lift); box-shadow: var(--shadow); transition: border-color .12s ease-out, box-shadow .12s ease-out; }
+.composer:focus-within { border-color: var(--mid); box-shadow: var(--shadow), 0 0 0 3px color-mix(in srgb, var(--ink) 6%, transparent); }
+@media (pointer: coarse) { .send, .attach, .mic { width: 44px; height: 44px; } }
 .composer textarea { flex: 1; resize: none; border: 0; outline: 0; background: none; color: var(--ink); font: 16px/1.5 var(--sans); padding: 7px 0; max-height: 40vh; }
 .composer textarea::placeholder { color: var(--soft); }
 .send, .attach, .mic { flex: none; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; }
@@ -227,15 +232,24 @@ header > .imping { display: flex; flex-direction: column; justify-content: cente
 @media not (pointer: fine) { #import .desk { display: none; } }
 @media (max-width: 420px) { #import .two { grid-template-columns: 1fr; } }
 
+/* a phone: the tabs stop between names rather than half-way through one,
+   and the user's bubble takes more of a narrow screen */
+@media (max-width: 600px) {
+  #tabs { scroll-snap-type: x proximity; }
+  #tabs button { scroll-snap-align: start; }
+  .msg.user { max-width: 88%; }
+  .block { gap: 10px; padding: 9px 12px; }
+}
+
 /* The chat */
 #log { width: min(var(--col), 100% - 40px); margin: 0 auto; padding: 24px 0 40px; min-height: calc(100vh - 180px); }
 #log > * > * { margin-block: 14px; }
 .cap { font: italic 14.5px var(--serif); color: var(--mid); }
 
 /* a block: one summary, its size on the left */
-.block { display: flex; gap: 12px; padding: 10px 14px; background: var(--block); border-radius: 10px; font: 15px/1.55 var(--serif); cursor: pointer; overflow-wrap: anywhere; }
+.block { display: flex; gap: 14px; padding: 10px 14px; background: var(--block); border-radius: 8px; font: 16px/1.6 var(--serif); cursor: pointer; overflow-wrap: anywhere; transition: background .12s ease-out; }
 .block:hover { background: var(--hover); }
-.block .lv { flex: none; min-width: 38px; font: 600 11.5px/24px var(--sans); color: var(--mid); }
+.block .lv { flex: none; min-width: 3.4ch; padding-right: 10px; border-right: 1px solid var(--hair); font: 600 11px/23px var(--mono); font-variant-numeric: tabular-nums; color: var(--mid); }
 
 /* an open block: its halves inside a frame; a message open (1x) as it
    looks whole, its pill beside Copy, shown as Copy is */
@@ -256,7 +270,7 @@ header > .imping { display: flex; flex-direction: column; justify-content: cente
 .more > summary:hover { color: var(--ink); }
 
 /* a message, by kind */
-.msg { position: relative; overflow-wrap: anywhere; font: 17.5px/1.68 var(--serif); color: var(--fg); font-style: var(--it); }
+.msg { position: relative; overflow-wrap: anywhere; font: clamp(16.5px, .3vw + 15.7px, 18px)/1.66 var(--serif); color: var(--fg); font-style: var(--it); }
 .msg > :first-child, .msg > .copy + * { margin-top: 0; }
 .msg > :last-child { margin-bottom: 0; }
 .msg p, .msg ul, .msg ol, .msg pre, .msg blockquote { margin: 0 0 .85em; }
@@ -306,7 +320,7 @@ header > .imping { display: flex; flex-direction: column; justify-content: cente
 .msg pre.diff .gap { color: var(--soft); }
 .msg pre .lang { display: block; margin-bottom: 4px; font: 600 11px var(--sans); color: var(--mid); }
 .msg.note, .msg.mind { font-size: 14.5px; line-height: 1.6; }
-.msg .brand { font: 600 .92em var(--brand); font-style: normal; letter-spacing: -.01em; color: var(--accent); }
+.msg .brand { font: 650 .92em var(--brand); font-style: normal; letter-spacing: -.012em; color: var(--accent); }
 .msg .name { font: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .msg .name:hover { background: var(--ink); color: var(--paper); }
 
@@ -419,6 +433,7 @@ header > .imping { display: flex; flex-direction: column; justify-content: cente
 /* a movement's nothing to someone who asked for none: the intro shows at
    once, and what fades arrives (WCAG 2.3.3) */
 @media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0s !important; }
   #intro, #intro .scene, #intro .scene > * { animation: none; }
   #intro { transition: none; }
   progress::-webkit-progress-value { transition: none; }

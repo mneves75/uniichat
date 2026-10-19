@@ -47,7 +47,7 @@ const READS = new Map<string, (x: Input) => Shown>([
   ["edit",     (x) => (Array.isArray(x.edits) ? { head: edits_files(x.edits), blocks: [] } : input_shown(x))],
   ["zoom",     (x) => ({ head: msg_show(x.id, x.n) + (x.at === undefined ? "" : " from char " + x.at), blocks: [] })],
   ["date",     (x) => ({ head: msg_show(x.id, 1), blocks: [] })],
-  ["search",   (x) => ({ head: String(x.query ?? "") + (x.regex === true ? " (regex)" : "") + range_show(x.since, x.until), blocks: [] })],
+  ["search",   (x) => ({ head: String(x.query ?? "") + (x.regex === true ? " (regex)" : "") + range_show(x.since, x.until) + (x.newest === true ? " · newest first" : ""), blocks: [] })],
   ["spawn",    (x) => ({ head: tasks_show(x.tasks, x.effort), blocks: (Array.isArray(x.tasks) ? x.tasks : []).flatMap(text_block) })],
   ["tell",     (x) => ({ head: String(x.name ?? ""), blocks: text_block(x.message) })],
   ["computer", (x) => ({ head: "", blocks: text_block(x.task) })],

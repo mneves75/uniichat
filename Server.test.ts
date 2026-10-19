@@ -40,6 +40,31 @@ test("Server.ts alone serves the page", async () => {
   expect(await res.text()).toContain("<title>");
 });
 
+// The installer's checksum is published beside it, so `unii update` can
+// refuse one that changed: the file served must hash to what is published.
+test("the installer's published sha256 is the installer's", async () => {
+  const port = 9463;
+  const dir = fs.mkdtempSync(os.tmpdir() + "/unii-server-");
+  const site = "http://127.0.0.1:" + port;
+  const proc = Bun.spawn([process.execPath, import.meta.dir + "/Server.ts", String(port)], { env: { ...process.env, UNII_DIR: dir, UNII_SITE: site }, stdout: "ignore", stderr: "inherit" });
+  try {
+    let sh = "";
+    for (let k = 0; k < 100 && sh === ""; k++) {
+      sh = await fetch(site + "/install.sh").then((res) => (res.ok ? res.text() : "")).catch(() => "");
+      if (sh === "") await Bun.sleep(50);
+    }
+    expect(sh).toContain("install.sh");
+    const said = await (await fetch(site + "/install.sh.sha256")).text();
+    const want = said.trim().split(/\s+/)[0];
+    expect(want).toMatch(/^[0-9a-f]{64}$/);
+    expect(want).toBe(new Bun.CryptoHasher("sha256").update(sh).digest("hex"));
+  } finally {
+    proc.kill();
+    await proc.exited;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("health answers signed out: no user, no chat, its own counts", async () => {
   const res = await server_get(9462, {}, "/health");
   expect(res.status).toBe(200);

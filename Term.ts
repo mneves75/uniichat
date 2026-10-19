@@ -64,7 +64,7 @@ type Cmd = [use: string, keys: string, text: string, run: (t: Term, arg: string)
 
 // this unii's version: each release ships one, a new one for every
 // change to Term.ts or what it imports
-const VERSION = "1.1.0";
+const VERSION = "1.2.0";
 
 const ARGS   = process.argv.slice(2);
 const LOGIN  = ARGS.includes("login");
@@ -1077,12 +1077,46 @@ function update_newer(ver: string): boolean {
   return a.length === 3 && a.every(Number.isInteger) && (a[0] - b[0] || a[1] - b[1] || a[2] - b[2]) > 0;
 }
 
-// runs the installer again: the one way unii changes. The command prints
-// first, so one can run it alone.
-function update_run(url: string): void {
-  const cmd = "curl -fsSL " + url + "/install.sh | sh";
-  console.error(cmd);
-  process.exitCode = child.spawnSync("sh", ["-c", cmd], { stdio: "inherit" }).status ?? 1;
+// runs the installer again: the one way unii changes. It is read first,
+// and only run when its sha256 is the one the server publishes beside it
+// (/install.sh.sha256): a server whose installer changed under it is
+// refused, not piped into a shell. A server that publishes none is refused
+// too, unless UNII_TRUST_UNVERIFIED=1 says its word is enough.
+async function update_run(url: string): Promise<void> {
+  const at = url + "/install.sh";
+  const text = await fetch(at).then((res) => (res.ok ? res.text() : Promise.reject(new Error("HTTP " + res.status)))).catch((err: Error) => {
+    console.error("Couldn't read " + at + ": " + err.message);
+    return null;
+  });
+  if (text === null) {
+    process.exitCode = 1;
+    return;
+  }
+  const hash = new Bun.CryptoHasher("sha256").update(text).digest("hex");
+  const published = await fetch(url + "/install.sh.sha256").then((res) => (res.ok ? res.text() : "")).catch(() => "");
+  const want = published.trim().split(/\s+/)[0] ?? "";
+  if (want === "") {
+    if (process.env.UNII_TRUST_UNVERIFIED !== "1") {
+      console.error("No checksum at " + url + "/install.sh.sha256: not running " + at + " (its sha256 is " + hash + ").");
+      console.error("Publish that file, or set UNII_TRUST_UNVERIFIED=1 to run it anyway.");
+      process.exitCode = 1;
+      return;
+    }
+    console.error("No checksum published: running " + at + " unverified (sha256 " + hash + ").");
+  } else if (want !== hash) {
+    console.error("Refusing " + at + ": its sha256 is " + hash + ", not the published " + want + ".");
+    process.exitCode = 1;
+    return;
+  } else {
+    console.error("Verified " + at + " (sha256 " + hash + ").");
+  }
+  const file = os.tmpdir() + "/unii-install-" + process.pid + ".sh";
+  fs.writeFileSync(file, text);
+  try {
+    process.exitCode = child.spawnSync("sh", [file], { stdio: "inherit" }).status ?? 1;
+  } finally {
+    fs.rmSync(file, { force: true });
+  }
 }
 
 // Main
@@ -1116,7 +1150,7 @@ if (HELP || ODD !== undefined) {
 } else if (ASKVER) {
   console.log("unii " + VERSION);
 } else if (UPDATE) {
-  update_run(SERVER);
+  await update_run(SERVER);
 } else if (SERVE) {
   self_mark();
   await (await import("./Server.ts")).serve(Number(PORT ?? 8788), null);

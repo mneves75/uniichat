@@ -94,9 +94,17 @@ type End = [number, number];
 // a view in view.json
 type Kept = { parts: Array<[number, number]>; batch: boolean };
 
-// view.json: the chat's view, the compactions' (none: the chat's), and
-// the store's version (`v`; none: written before there was one)
-type Saved = Kept & { v?: number; seen?: Kept; main: End; tree: End; pick: object | null; goal?: string | null; work?: string[] };
+// how the lines of a store were written: the sizes the tree was built with,
+// and the prompt revision that summarised them. A line is written once and
+// never revised, so a store that mixes these is a store whose lines cannot
+// quite be compared: recorded, never refused (that would brick a chat on a
+// tune), so a later reader can say why an older chat reads differently
+type Geometry = { node: number; high: number; seen: number; prompt: string };
+
+// view.json: the chat's view, the compactions' (none: the chat's), the
+// store's version (`v`; none: written before there was one), and the
+// geometry its lines were written under
+type Saved = Kept & { v?: number; geometry?: Geometry; seen?: Kept; main: End; tree: End; pick: object | null; goal?: string | null; work?: string[] };
 
 // fds: files read lately, open, oldest first; count: the pages logged
 // whole; open: those after, not whole yet; pick: the chat's, as last set;
@@ -131,6 +139,7 @@ export type Memory = {
   hold   : Array<string | null>;
   done   : boolean;
   warn?  : string;
+  prompt? : string;
   wait   : Set<() => void>;
   share  : () => Share;
   pay?   : Pay;
@@ -254,6 +263,12 @@ export namespace Memory {
     }
   }
 
+  // the geometry this build writes lines with (`prompt`: the summarising
+  // prompt's revision, set by Tools.ts when the chat's tools are served)
+  export function geometry(prompt = ""): Geometry {
+    return { node: NODE, high: HIGH, seen: SEEN, prompt };
+  }
+
   // a view as kept (none: the highest nodes built)
   export function open(mem: Memory, view: View, kept: Kept | null): void {
     const keys = kept === null ? null : new Set(kept.parts.map(([l, i]) => Memory.slot(l, i)));
@@ -266,7 +281,7 @@ export namespace Memory {
   export function save(mem: Memory): void {
     const file = mem.dir + "/view.json";
     const [chat, seen] = [mem.view, mem.seen].map((view): Kept => ({ parts: view.parts.map((part) => [part.l, part.i]), batch: view.batch }));
-    fs.writeFileSync(file + ".new", JSON.stringify({ v: STORE, ...chat, seen, pick: mem.pick, goal: mem.goal, work: mem.work, ...mem.ends }));
+    fs.writeFileSync(file + ".new", JSON.stringify({ v: STORE, geometry: Memory.geometry(mem.prompt ?? ""), ...chat, seen, pick: mem.pick, goal: mem.goal, work: mem.work, ...mem.ends }));
     fs.renameSync(file + ".new", file);
     Disk.wrote(file);
   }
@@ -452,22 +467,27 @@ export namespace Memory {
   // messages whose text matches `query`: a substring (case-insensitive),
   // or a regular expression (`regex`; a bad one throws, its caller's to
   // say), between two days ("YYYY-MM-DD", inclusive; none: the whole
-  // chat), oldest first, at most `limit` of them, and whether more matched
-  // than were returned. Reads the log itself (main/), so it reaches what
+  // chat), oldest first (or newest first, `newest`), at most `limit` of
+  // them, and whether more matched than were returned. Reads the log itself (main/), so it reaches what
   // no view and no node holds, and what a summary long forgot.
-  export function search(mem: Memory, query: string, opts: { regex?: boolean; since?: string; until?: string; limit?: number } = {}): { hits: Hit[]; more: boolean } {
+  export function search(mem: Memory, query: string, opts: { regex?: boolean; since?: string; until?: string; limit?: number; newest?: boolean } = {}): { hits: Hit[]; more: boolean } {
     const limit = Math.max(1, Math.min(opts.limit ?? 20, 100));
     const test = opts.regex === true ? new RegExp(query, "i") : null;
     const want = query.toLowerCase();
     const hits: Hit[] = [];
     let more = false;
     const dir = mem.dir + "/main";
-    for (const name of fs.readdirSync(dir).filter((name) => name.endsWith(".jsonl")).sort()) {
+    const names = fs.readdirSync(dir).filter((name) => name.endsWith(".jsonl")).sort();
+    // newest first: what is true now is the failure mode memory benchmarks
+    // measure (a superseded fact answered from the old value), so the tool
+    // that finds a thing can also find its last word
+    for (const name of opts.newest === true ? names.reverse() : names) {
       const day = name.slice(0, 10);
       if ((opts.since !== undefined && day < opts.since) || (opts.until !== undefined && day > opts.until)) {
         continue;
       }
-      for (const rec of Memory.file(dir + "/" + name)) {
+      const day_lines = Memory.file(dir + "/" + name);
+      for (const rec of opts.newest === true ? day_lines.reverse() : day_lines) {
         if (!Number.isInteger(rec?.i) || typeof rec.text !== "string") {
           continue;
         }
@@ -1270,7 +1290,7 @@ h4 { margin: .8em 0 .2em; color: #888; font-weight: normal; } pre { margin: 0; w
   // parses, its view tiles the chat, every node it names has its halves,
   // and every image a message names is there. `orphans`: image files no
   // message names (a GC's, never a fault)
-  export function faults(dir: string): { faults: Fault[]; orphans: string[] } {
+  export function faults(dir: string): { faults: Fault[]; orphans: string[]; notes: string[] } {
     const out: Fault[] = [];
     const mem = { dir, fds: new Map() } as unknown as Memory;
     const { kept, bad } = Memory.saved(dir);
@@ -1279,7 +1299,15 @@ h4 { margin: .8em 0 .2em; color: #888; font-weight: normal; } pre { margin: 0; w
     }
     if ((kept?.v ?? 0) > STORE) {
       out.push({ where: "view.json", why: "store " + kept!.v + ", newer than this unii reads (" + STORE + ")" });
-      return { faults: out, orphans: [] };
+      return { faults: out, orphans: [], notes: [] };
+    }
+    const notes: string[] = [];
+    if (kept?.geometry !== undefined) {
+      const now = Memory.geometry();
+      const said = ["node", "high", "seen"].filter((key) => (kept.geometry as any)[key] !== (now as any)[key]).map((key) => key + " " + (kept.geometry as any)[key] + " → " + (now as any)[key]);
+      if (said.length > 0) {
+        notes.push("its lines were written with " + said.join(", ") + ": lines from both geometries sit together");
+      }
     }
     const count = fs.existsSync(dir + "/main.index") ? fs.statSync(dir + "/main.index").size / SLOT : 0;
     const named = new Set<string>();
@@ -1319,7 +1347,7 @@ h4 { margin: .8em 0 .2em; color: #888; font-weight: normal; } pre { margin: 0; w
     const orphans = fs.existsSync(images) ? fs.readdirSync(images).filter((name) => !named.has(name) && !named.has(name.replace(/\.jpg$/, ""))) : [];
     mem.fds.forEach((fd) => fs.closeSync(fd));
     mem.fds.clear();
-    return { faults: out, orphans };
+    return { faults: out, orphans, notes };
   }
 
 }

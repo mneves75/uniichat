@@ -230,3 +230,31 @@ test("doctor: an index slot a crash never wrote is named, not passed over", () =
   const named = Memory.faults(dir).faults.map((fault) => fault.where);
   expect(named).toContain("main.index #1");
 });
+
+test("search reads from the latest back when the question is what is true now", () => {
+  const dir = dir_new();
+  const mem = mem_new(dir);
+  say(mem, "the deploy port is 8080");
+  say(mem, "something else");
+  say(mem, "the deploy port is 9090 now");
+  expect(Memory.search(mem, "deploy port").hits.map((hit) => hit.id)).toEqual([0, 2]);
+  const newest = Memory.search(mem, "deploy port", { newest: true });
+  expect(newest.hits.map((hit) => hit.id)).toEqual([2, 0]);
+});
+
+test("a store records the geometry and prompt revision its lines were written with", () => {
+  const dir = dir_new();
+  const mem = mem_new(dir);
+  say(mem, "kept");
+  mem.prompt = "abc123def456";
+  Memory.save(mem);
+  const kept = JSON.parse(fs.readFileSync(dir + "/view.json", "utf8"));
+  expect(kept.geometry).toMatchObject({ node: 512, prompt: "abc123def456" });
+  expect(Memory.faults(dir).notes).toEqual([]);
+  // a store a later tune wrote says so, and it is a note, not a fault
+  const other = { ...kept, geometry: { ...kept.geometry, node: 1024 } };
+  fs.writeFileSync(dir + "/view.json", JSON.stringify(other));
+  const found = Memory.faults(dir);
+  expect(found.faults).toEqual([]);
+  expect(found.notes.join(" ")).toContain("node 1024");
+});

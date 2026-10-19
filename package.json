@@ -1,5 +1,6 @@
 {
   "name": "uniichat",
+  "version": "1.2.0",
   "private": true,
   "packageManager": "bun@1.4.3",
   "scripts": {

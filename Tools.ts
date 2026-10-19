@@ -195,7 +195,7 @@ const SUB = SUB_HEAD + "\n\n" + VIEW_DOC + "\n\n" + DEVICES;
 const OWN: Spec[] = [
   spec("zoom", "Open the line id+n of the view into the two lines of n/2 under it; n = 1 gives the message whole. With an agent's name as id, give that agent's whole chat. A long text comes in pages from character at, saying where to go on.", { id: { type: ["integer", "string"] }, n: INT, at: INT }, ["id"]),
   spec("date", "The date and time of message id.", { id: INT }, ["id"]),
-  spec("search", "Search every message of this chat, however old, by a substring (case-insensitive) or, with regex, a regular expression. Answers each match oldest first as #id, date, kind and the line that matched. Use it to find where something was said, then zoom what it finds.", { query: STR, regex: { type: "boolean" }, since: STR, until: STR, limit: INT }, ["query"]),
+  spec("search", "Search every message of this chat, however old, by a substring (case-insensitive) or, with regex, a regular expression. Answers each match as #id, date, kind and the line that matched, oldest first, or newest first with newest: true (use that when the question is what is true NOW: a later message supersedes an earlier one). Then zoom what it finds.", { query: STR, regex: { type: "boolean" }, since: STR, until: STR, limit: INT, newest: { type: "boolean" } }, ["query"]),
 ];
 const BOSS: Spec[] = [
   spec("spawn", "Start one subagent per task, in parallel, and return their names at once. Each one's report reaches you as a message \"[Name] report\" when it finishes. A subagent sees the view and the user's instructions, but knows what you want only from its task.", { tasks: { type: "array", items: STR }, effort: { type: "string", enum: EFFORTS, description: "How hard they think; by default, as hard as you." } }, ["tasks"]),
@@ -218,6 +218,10 @@ export namespace Tools {
 
   // key: a chat's moving here keeps its own
   export function serve(mem: Memory, hooks: Hooks, key: string = crypto.randomUUID()): Tools {
+    // the revision of the prompt every line written from now on is
+    // summarised with: kept in view.json (Memory.geometry), so a store can
+    // say which prompt wrote its lines, and a tune is auditable later
+    mem.prompt ??= new Bun.CryptoHasher("sha256").update(PROMPT).digest("hex").slice(0, 12);
     const url = Tools.base() + key + "/";
     const tools: Tools = { mem, devices: new Map(), agents: new Map(), key, url, hooks, away: Promise.withResolvers() };
     CHATS.set(key, tools);
@@ -370,6 +374,7 @@ export namespace Tools {
             since : args.since === undefined ? undefined : String(args.since),
             until : args.until === undefined ? undefined : String(args.until),
             limit : args.limit === undefined ? 20 : Number(args.limit),
+            newest: args.newest === true,
           });
         } catch (err: any) {
           return { text: "That doesn't read as a regular expression: " + (err?.message ?? err), fail: true };

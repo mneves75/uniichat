@@ -52,6 +52,9 @@ function main(): number {
     orphans += found.orphans.length;
     const name = dir.split("/").pop() ?? dir;
     const loose = found.orphans.length === 0 ? "" : " · " + found.orphans.length + " unreferenced image" + (found.orphans.length === 1 ? "" : "s") + " (`unii gc`)";
+    for (const note of found.notes) {
+      console.log("  " + name + ": " + note);
+    }
     if (found.faults.length === 0) {
       console.log(name + ": ok (" + show(bytes) + ")" + loose);
       continue;

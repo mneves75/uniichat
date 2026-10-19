@@ -68,6 +68,8 @@ Other commands:
     bun run test                     # the tests, each file on its own
     bun run web                      # rebuilds web/app.js from web/src
     bun Doctor.ts                    # reads every chat's files and says what is wrong
+    bun Backup.ts save <chat> <to>    # a checked snapshot of a chat's store
+    bun Gc.ts <chat> [--apply]        # the images no message names
     bun build --compile Term.ts --outfile unii
                                      # one `unii` executable; `unii serve`
                                      # runs the server it carries
@@ -83,9 +85,30 @@ newer than the server reads) and holds the view, the pick and the goal;
 one a crash cut short is kept beside it as `view.json.bad-<ms>` and the
 chat says so, rather than being overwritten as if it had never existed.
 
+`view.json` also records the geometry its lines were written under (`node`,
+`high`, `seen`, and the prompt revision that summarised them). A tune is
+recorded, never refused: `bun Doctor.ts` prints a note when a store's lines
+come from two geometries, so a chat that "feels dumber" after a re-tune can be
+explained rather than guessed at.
+
+`unii update` reads the installer first and runs it only when its sha256 is
+the one the server publishes at `/install.sh.sha256`; a server that publishes
+none is refused unless `UNII_TRUST_UNVERIFIED=1`. `v*` tags build the four
+`unii` binaries and publish them with their checksums (`.github/workflows/release.yml`).
+
 `/health` answers what an operator watches, signed out and naming nobody:
 `{ ok, worker, of, chats, sockets, backlog, calls, up }`, where `backlog`
 is the summaries not built yet (the number that grows during an import).
+
+`bun Backup.ts save <chat> <to>` copies a chat's store and refuses to call it
+saved unless the copy reads as it was written; `bun Backup.ts restore <from>
+<to>` brings it back into an empty directory (a restore over a live store is
+refused). A live chat can be saved: the log is append-only and `view.json` is
+renamed into place, so a snapshot is consistent at a line boundary.
+
+`bun Gc.ts <chat> [--apply]` names, and with `--apply` removes, only the
+images no message names. Agent logs and summary lines are references a later
+`zoom` follows, so they are never collected.
 
 `bun Doctor.ts [<dir>]` reads a chat's files as they are, without opening
 it, so one a running server holds can be checked beside it: `view.json`

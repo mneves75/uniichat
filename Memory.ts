@@ -226,7 +226,12 @@ export namespace Memory {
     if (bad) {
       mem.warn = "This chat's view file was unreadable: it was kept beside it, and the view, the model and the goal were rebuilt.";
     }
-    Memory.save(mem);
+    if (saved === null) {
+      // nothing was saved to keep: a chat's first open, or one whose
+      // view.json was just moved aside. A stored one is left as it was
+      // written (Memory.fit saves it when it changes anything)
+      Memory.save(mem);
+    }
     return mem;
   }
 
@@ -372,12 +377,10 @@ export namespace Memory {
     return mem.dir + "/" + stream + "/" + new Date(day * DAY).toISOString().slice(0, 10) + ".jsonl";
   }
 
+  // a log's lines, a line a crash cut short skipped (Memory.scan is the
+  // one that ends such a line, as it loads: a read never writes the log)
   export function file(file: string): any[] {
-    const data = fs.readFileSync(file, "utf8");
-    if (data !== "" && !data.endsWith("\n")) {
-      fs.appendFileSync(file, "\n");
-    }
-    return data.split("\n").flatMap((line) => Memory.parse(line, file) ?? []);
+    return fs.readFileSync(file, "utf8").split("\n").flatMap((line) => Memory.parse(line, file) ?? []);
   }
 
   // null: not JSON

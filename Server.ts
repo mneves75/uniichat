@@ -1030,11 +1030,37 @@ export namespace Chat {
     Tools.take(chat.tools, moved.tools, far);
     Memory.take(chat.mem, moved.sums, (id, bill) => far(id, () => {}, bill));
     if (turn.busy) {
-      const bill = turn.sent.length === 0 ? undefined : chat.mem.pay?.("chat", String(turn.sent[0].id));
+      const bill = Chat.billed(chat.mem, turn.sent);
       const run = call === null ? null : (chat.call = far(call, (ev) => Chat.on(chat, null, ev), bill));
       const checking = check ? { call: far(check.call, () => {}, chat.mem.pay?.("chat", "goal")), goal: check.goal } : null;
       Chat.turn(chat, run ? Chat.ended(chat, run, chat.halt) : checking && Chat.checked(chat, checking, chat.halt));
     }
+  }
+
+  // a goal act's text: the goal (a string), a halt (null), or the refusal
+  // an act with no text, or too much of it, is answered with. A field that
+  // is absent is a client's bug, never a halt: it used to be stored as the
+  // string "undefined" (and, with a bare ternary, as a silent halt)
+  export function goal_text(text: unknown): string | null | { error: string; status: number } {
+    if (text === null) {
+      return null;
+    }
+    if (typeof text !== "string") {
+      return { error: "A goal needs its text: say what to aim at, or null to halt it.", status: 400 };
+    }
+    if (text.length > GOAL_MAX) {
+      return { error: "A goal is at most " + GOAL_MAX + " characters: say the rest in the chat.", status: 413 };
+    }
+    return text;
+  }
+
+  // what a turn's call is billed as, from the messages it had when the
+  // chat moved: none, if it moved before its first was logged (a turn's
+  // sent is empty from its start until the call takes them, and the chat
+  // moves as soon as it has no post: reading sent[0] there was a TypeError
+  // that could take the worker that had just taken the chat)
+  export function billed(mem: Memory, sent: Msg[]): Bill | undefined {
+    return sent.length === 0 ? undefined : mem.pay?.("chat", String(sent[0].id));
   }
 
   // what runs: Unii's turn, the agents at work
@@ -1239,9 +1265,9 @@ export namespace Chat {
         return {};
       }
       case "goal": {
-        const goal = typeof msg.text === "string" ? msg.text : null;
-        if (goal !== null && goal.length > GOAL_MAX) {
-          return { error: "A goal is at most " + GOAL_MAX + " characters: say the rest in the chat.", status: 413 };
+        const goal = Chat.goal_text(msg.text);
+        if (typeof goal === "object" && goal !== null) {
+          return goal;
         }
         if (goal === chat.mem.goal) {
           return {};

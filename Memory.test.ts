@@ -178,3 +178,41 @@ test("search takes a day's range, and nothing matches nothing", () => {
   expect(Memory.search(mem, "kept", { since: "2999-01-01" }).hits.length).toBe(0);
   expect(Memory.search(mem, "nothere").hits.length).toBe(0);
 });
+
+test("doctor: a store it wrote has no fault, and a planted one is named", () => {
+  const dir = dir_new();
+  const mem = mem_new(dir);
+  say(mem, "a message with a picture", "user");
+  Memory.save(mem);
+  expect(Memory.faults(dir).faults).toEqual([]);
+  // a view that does not tile the chat (written last: a save would put it
+  // back as it was)
+  say(mem, "one more");
+  Memory.save(mem);
+  const file = dir + "/view.json";
+  const kept = JSON.parse(fs.readFileSync(file, "utf8"));
+  fs.writeFileSync(file, JSON.stringify({ ...kept, parts: [[0, 0]] }));
+  expect(Memory.faults(dir).faults.some((fault) => /covers/.test(fault.why))).toBe(true);
+  // an image no message names is an orphan, not a fault; one a message
+  // names and that is gone is a fault
+  fs.mkdirSync(dir + "/docs/images", { recursive: true });
+  fs.writeFileSync(dir + "/docs/images/0123456789abcdef.png", "x");
+  expect(Memory.faults(dir).orphans).toContain("0123456789abcdef.png");
+  expect(Memory.faults(dir).faults.some((fault) => /docs\/images/.test(fault.where))).toBe(false);
+});
+
+test("doctor: an index slot a crash never wrote is named, not passed over", () => {
+  const dir = dir_new();
+  const mem = mem_new(dir);
+  say(mem, "one");
+  say(mem, "two");
+  Memory.save(mem);
+  expect(Memory.faults(dir).faults).toEqual([]);
+  // a slot that points at nothing, as a torn write leaves it (a main
+  // record's slot is its message's id, 16 bytes each)
+  const fd = fs.openSync(dir + "/main.index", "r+");
+  fs.writeSync(fd, Buffer.alloc(16), 0, 16, 1 * 16);
+  fs.closeSync(fd);
+  const named = Memory.faults(dir).faults.map((fault) => fault.where);
+  expect(named).toContain("main.index #1");
+});

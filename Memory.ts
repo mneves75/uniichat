@@ -1256,4 +1256,65 @@ h4 { margin: .8em 0 .2em; color: #888; font-weight: normal; } pre { margin: 0; w
     return root.i + "|" + Memory.show(root);
   }
 
+  // Doctor
+  // ------
+
+  // a fault a store's files show: where, and what is wrong with it
+  export type Fault = { where: string; why: string };
+
+  // what a store's files say is wrong, read as they are (the chat is not
+  // opened, so one a server holds can be checked beside it): view.json
+  // parses, its view tiles the chat, every node it names has its halves,
+  // and every image a message names is there. `orphans`: image files no
+  // message names (a GC's, never a fault)
+  export function faults(dir: string): { faults: Fault[]; orphans: string[] } {
+    const out: Fault[] = [];
+    const mem = { dir, fds: new Map() } as unknown as Memory;
+    const { kept, bad } = Memory.saved(dir);
+    if (bad) {
+      out.push({ where: "view.json", why: "unreadable: the chat rebuilds its view, and its pick and goal are lost" });
+    }
+    if ((kept?.v ?? 0) > STORE) {
+      out.push({ where: "view.json", why: "store " + kept!.v + ", newer than this unii reads (" + STORE + ")" });
+      return { faults: out, orphans: [] };
+    }
+    const count = fs.existsSync(dir + "/main.index") ? fs.statSync(dir + "/main.index").size / SLOT : 0;
+    const named = new Set<string>();
+    for (let i = 0; i < count; i++) {
+      const root = Memory.read(mem, "main", i);
+      if (root === null) {
+        out.push({ where: "main.index #" + i, why: "points at no line: the index and the log disagree" });
+        continue;
+      }
+      (root.images ?? []).forEach((name: string) => named.add(name));
+    }
+    if (kept !== null) {
+      let at = 0;
+      for (const [l, i] of kept.parts) {
+        const [a, z] = Memory.span({ l, i });
+        if (a !== at) {
+          out.push({ where: "view.json", why: "its lines do not tile the chat: " + (a > at ? "a gap" : "an overlap") + " at message " + at });
+          break;
+        }
+        at = z + 1;
+        for (const half of Memory.halves({ l, i })) {
+          if (Memory.node(mem, half) === null) {
+            out.push({ where: "tree " + half.l + "/" + half.i, why: "a view line is made of it and it is not there" });
+          }
+        }
+      }
+      if (at !== count) {
+        out.push({ where: "view.json", why: "its view covers " + at + " of " + count + " messages" });
+      }
+    }
+    const images = dir + IMAGES;
+    for (const name of named) {
+      if (!fs.existsSync(images + name)) {
+        out.push({ where: "docs/images/" + name, why: "a message names it and it is not there" });
+      }
+    }
+    const orphans = fs.existsSync(images) ? fs.readdirSync(images).filter((name) => !named.has(name) && !named.has(name.replace(/\.jpg$/, ""))) : [];
+    return { faults: out, orphans };
+  }
+
 }

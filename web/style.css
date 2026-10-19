@@ -27,6 +27,7 @@
   --red    : #b42318; /* deleting the account */
   --veil   : rgb(0 0 0 / .3); /* the page behind a box over it */
   --shadow : 0 1px 2px rgba(0, 0, 0, .05), 0 6px 20px rgba(0, 0, 0, .05);
+  --focus  : #111111; /* the ring on what the keyboard is on (2 px, offset) */
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -63,6 +64,10 @@
 html { color-scheme: light dark; -webkit-text-size-adjust: 100%; scrollbar-gutter: stable; overflow-anchor: none; }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+/* the keyboard's place is always visible: a ring outside the edge, so it
+   never moves the layout or hides under a frame (WCAG 2.4.11) */
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+:focus:not(:focus-visible) { outline: none; }
 svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 ::selection { background: var(--ink); color: var(--paper); }
 a { color: inherit; text-underline-offset: 3px; }
@@ -411,6 +416,14 @@ header > .imping { display: flex; flex-direction: column; justify-content: cente
 #intro p { font: 400 clamp(19px, 2.3vw, 25px)/1.35 var(--serif); letter-spacing: -.01em; }
 #intro .mark { width: 56px; height: 56px; }
 #intro h1 { margin-top: 14px; font: 600 28px/1.1 var(--brand); letter-spacing: -.015em; }
+/* a movement's nothing to someone who asked for none: the intro shows at
+   once, and what fades arrives (WCAG 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+  #intro, #intro .scene, #intro .scene > * { animation: none; }
+  #intro { transition: none; }
+  progress::-webkit-progress-value { transition: none; }
+}
+
 @keyframes rise { from { opacity: 0; transform: translateY(4px); } }
 @keyframes gone { to { opacity: 0; } }
 @keyframes hold { to { visibility: visible; } }

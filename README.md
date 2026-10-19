@@ -32,6 +32,11 @@ How it works
   and can drive a Mac's screen, on any computer where `unii` is open
   (each is a device it can name). It can spawn subagents, which work in
   the background and report back as messages.
+- **Search, not just zoom.** The view is what the agent reads, but it can
+  also search every message ever logged (a word, a phrase, or a regular
+  expression, over a day's range) and get `#id`, date and the line that
+  matched, then zoom or date it. Recall does not depend on a summary
+  remembering the right word.
 - **Import.** Bring your past Claude and ChatGPT chats (Claude Code and
   Codex folders, or the websites' exports); they join the tree.
 
@@ -59,14 +64,35 @@ asks for the code the terminal shows. `bun Term.ts help` lists the rest.
 
 Other commands:
 
+    bun run check                    # tsc --noEmit (strict: none at all)
     bun run test                     # the tests, each file on its own
     bun run web                      # rebuilds web/app.js from web/src
+    bun Doctor.ts                    # reads every chat's files and says what is wrong
     bun build --compile Term.ts --outfile unii
                                      # one `unii` executable; `unii serve`
                                      # runs the server it carries
 
+The repo is pinned to one Bun (`.tool-versions`, `packageManager`), and
+`.github/workflows/ci.yml` runs the types, the tests and a check that
+`web/app.js` is what `web/src` builds.
+
 Your chats live in ~/.unii/users/<id>, one JSON line per message
-(main/) and per summary (tree/). They are the memory: back them up.
+(main/) and per summary (tree/). They are the memory: back them up. A
+chat's `view.json` says which store version wrote it (`v`, refused if
+newer than the server reads) and holds the view, the pick and the goal;
+one a crash cut short is kept beside it as `view.json.bad-<ms>` and the
+chat says so, rather than being overwritten as if it had never existed.
+
+`/health` answers what an operator watches, signed out and naming nobody:
+`{ ok, worker, of, chats, sockets, backlog, calls, up }`, where `backlog`
+is the summaries not built yet (the number that grows during an import).
+
+`bun Doctor.ts [<dir>]` reads a chat's files as they are, without opening
+it, so one a running server holds can be checked beside it: `view.json`
+parses, its lines tile the chat, every node they name exists, and every
+image a message names is there. It also counts images no message names
+(`unii gc`'s work). Exit 1 if anything is wrong, so a backup script can
+tell.
 
 Config
 ------

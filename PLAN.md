@@ -1,5 +1,20 @@
 # UniiChat — review and improvement plan
 
+> **Status (implemented on `improve/review-plan`, v1.1.0).** Landed: A1 (view.json
+> corruption is loud, moved aside, and never overwritten), A2 (8-digit code, constant-time
+> compare, 5 tries a ticket), A3 (goal validated and capped), A4 (body cap 1 GiB), A5
+> (`turn.sent` guard + `Main.event` around the handover), B1 (tsconfig, strict, `bun run
+> check`), B2 (CI: types, tests, bundle), B3 (Bun pinned, lockfile), C1 (store version), C2
+> partly (`Memory.faults` + `Doctor.ts`; no `--deep` walk), C5 partly (log/tiling/slots/store
+> version/corruption/torn line/search/faults — no SIGKILL suite), C8 (`Agent.gate`: per-model
+> cap, turns before imports, abort-safe), D2 (`/health`), E1 (`search` + prompt + Call/Theme),
+> E3 partly (focus ring, roles, reduced motion, theme-color; verified in a real render).
+> **Not done:** A6 (installer checksum), B4 (non-spoofable network key), C3 (backup/restore),
+> C4 (`unii gc`; doctor only reports orphans), C6 (render goldens), C7 (wire replay), D1
+> (structured logs), D3 (handover under load), D4 (release workflow), E2 (tuning harness), E4
+> (iOS decision). Each is still the next thing on its line below.
+
+
 Reviewed commit: `0500bf6` ("UniiChat", the only commit).
 Source: 26 root `.ts` modules + `web/src/{main,Html}.ts` + `Computer.swift` + 3 Swift files
 ≈ 14.7k hand-written lines, plus a committed 2.4k-line generated bundle (`web/app.js`).

@@ -40,6 +40,17 @@ test("Server.ts alone serves the page", async () => {
   expect(await res.text()).toContain("<title>");
 });
 
+test("health answers signed out: no user, no chat, its own counts", async () => {
+  const res = await server_get(9462, {}, "/health");
+  expect(res.status).toBe(200);
+  const body = await res.json();
+  expect(body.ok).toBe(true);
+  expect(body.worker).toBe(0);
+  expect(body.chats).toBe(0);
+  expect(typeof body.backlog).toBe("number");
+  expect(body.up).toBeGreaterThanOrEqual(0);
+});
+
 test("with workers, Server.ts routes to them", async () => {
   const res = await server_get(9471, { UNII_WORKERS: "2" }, "/");
   expect(res.headers.get("x-unii-worker")).toMatch(/^127\.0\.0\.1:947[23]$/);

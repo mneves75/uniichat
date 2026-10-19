@@ -1583,6 +1583,12 @@ export namespace Main {
       if (p === "/api/hello") {
         return Response.json({ hello: HELLO, bills: cloud.billing.bills, github: cloud.billing.github !== null });
       }
+      // what an operator watches: this process's chats, their summaries not
+      // yet built, the calls running, and how long it has been up. No user
+      // and no chat is named, so it is answered signed out too
+      if (p === "/health") {
+        return Response.json(Main.health());
+      }
       if (p === "/api/delete") {
         return await Main.close(req);
       }
@@ -1665,6 +1671,18 @@ export namespace Main {
   // the worker of a user (signed out: of a token)
   export function shard(key: string): number {
     return Bun.hash.crc32(key) % Main.count;
+  }
+
+  // what /health answers about this process
+  export function health(): object {
+    let [chats, backlog, calls, sockets] = [0, 0, 0, 0];
+    for (const chat of Chat.chats.values()) {
+      chats += 1;
+      sockets += chat.socks.size;
+      backlog += chat.mem.busy.size + chat.mem.ready[0].flat().length + chat.mem.ready[1].flat().length;
+      calls += Object.keys(chat.calls).length;
+    }
+    return { ok: true, worker: Main.index, of: Main.count, chats, sockets, backlog, calls, up: Math.round(process.uptime()) };
   }
 
   // a worker, alone or of a supervisor (whose word, over IPC, wakes a

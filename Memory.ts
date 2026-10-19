@@ -442,6 +442,49 @@ export namespace Memory {
     return who + ": " + root.text + pics.join("");
   }
 
+  // a message found by Memory.search: its id, date, kind, and the line of
+  // it that matched (or its first line, cut)
+  export type Hit = { id: number; date: string; kind: Kind; text: string };
+
+  // messages whose text matches `query`: a substring (case-insensitive),
+  // or a regular expression (`regex`; a bad one throws, its caller's to
+  // say), between two days ("YYYY-MM-DD", inclusive; none: the whole
+  // chat), oldest first, at most `limit` of them, and whether more matched
+  // than were returned. Reads the log itself (main/), so it reaches what
+  // no view and no node holds, and what a summary long forgot.
+  export function search(mem: Memory, query: string, opts: { regex?: boolean; since?: string; until?: string; limit?: number } = {}): { hits: Hit[]; more: boolean } {
+    const limit = Math.max(1, Math.min(opts.limit ?? 20, 100));
+    const test = opts.regex === true ? new RegExp(query, "i") : null;
+    const want = query.toLowerCase();
+    const hits: Hit[] = [];
+    let more = false;
+    const dir = mem.dir + "/main";
+    for (const name of fs.readdirSync(dir).filter((name) => name.endsWith(".jsonl")).sort()) {
+      const day = name.slice(0, 10);
+      if ((opts.since !== undefined && day < opts.since) || (opts.until !== undefined && day > opts.until)) {
+        continue;
+      }
+      for (const rec of Memory.file(dir + "/" + name)) {
+        if (!Number.isInteger(rec?.i) || typeof rec.text !== "string") {
+          continue;
+        }
+        const line = rec.text.split("\n").find((text: string) => (test === null ? text.toLowerCase().includes(want) : test.test(text)));
+        if (line === undefined) {
+          continue;
+        }
+        if (hits.length >= limit) {
+          more = true;
+          break;
+        }
+        hits.push({ id: rec.i, date: String(rec.date ?? day), kind: rec.kind ?? "user", text: line.trim().slice(0, 240) });
+      }
+      if (more) {
+        break;
+      }
+    }
+    return { hits, more };
+  }
+
   // message i, from its file; null: none
   export function message(mem: Memory, i: number): Root | null {
     return Number.isInteger(i) && i >= 0 && i < mem.count ? Memory.read(mem, "main", i) : null;

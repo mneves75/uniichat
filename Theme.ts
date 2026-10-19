@@ -57,6 +57,7 @@ export const FRAMED: Kind[] = ["user", "work"];
 export const TOOL: Record<string, string> = {
   zoom     : "🔍",
   date     : "📅",
+  search   : "🔎",
   shell    : "⌨️",
   read     : "📖",
   write    : "📄",

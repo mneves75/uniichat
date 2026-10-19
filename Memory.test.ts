@@ -148,3 +148,33 @@ test("a line a crash cut short is skipped, not fatal, and the chat goes on", () 
   say(again, "after");
   expect(mem_new(dir).count).toBe(2);
 });
+
+test("search reads the log itself: an old message is found by a word in it", () => {
+  const dir = dir_new();
+  const mem = mem_new(dir);
+  say(mem, "the deploy broke because of the redis password");
+  say(mem, "unrelated chatter");
+  say(mem, "later: check the Redis Password again", "unii");
+  const all = Memory.search(mem, "redis password");
+  expect(all.hits.map((hit) => hit.id)).toEqual([0, 2]);
+  expect(all.hits[0].kind).toBe("user");
+  expect(all.hits[1].kind).toBe("unii");
+  expect(all.more).toBe(false);
+  // a regular expression, and a limit that says when more matched
+  expect(Memory.search(mem, "^later:", { regex: true }).hits.map((hit) => hit.id)).toEqual([2]);
+  const few = Memory.search(mem, "e", { limit: 1 });
+  expect(few.hits.length).toBe(1);
+  expect(few.more).toBe(true);
+  // a bad pattern is the caller's to report, never a crash
+  expect(() => Memory.search(mem, "(", { regex: true })).toThrow();
+});
+
+test("search takes a day's range, and nothing matches nothing", () => {
+  const dir = dir_new();
+  const mem = mem_new(dir);
+  say(mem, "kept");
+  const today = new Date().toISOString().slice(0, 10);
+  expect(Memory.search(mem, "kept", { since: today, until: today }).hits.length).toBe(1);
+  expect(Memory.search(mem, "kept", { since: "2999-01-01" }).hits.length).toBe(0);
+  expect(Memory.search(mem, "nothere").hits.length).toBe(0);
+});

@@ -195,6 +195,7 @@ const SUB = SUB_HEAD + "\n\n" + VIEW_DOC + "\n\n" + DEVICES;
 const OWN: Spec[] = [
   spec("zoom", "Open the line id+n of the view into the two lines of n/2 under it; n = 1 gives the message whole. With an agent's name as id, give that agent's whole chat. A long text comes in pages from character at, saying where to go on.", { id: { type: ["integer", "string"] }, n: INT, at: INT }, ["id"]),
   spec("date", "The date and time of message id.", { id: INT }, ["id"]),
+  spec("search", "Search every message of this chat, however old, by a substring (case-insensitive) or, with regex, a regular expression. Answers each match oldest first as #id, date, kind and the line that matched. Use it to find where something was said, then zoom what it finds.", { query: STR, regex: { type: "boolean" }, since: STR, until: STR, limit: INT }, ["query"]),
 ];
 const BOSS: Spec[] = [
   spec("spawn", "Start one subagent per task, in parallel, and return their names at once. Each one's report reaches you as a message \"[Name] report\" when it finishes. A subagent sees the view and the user's instructions, but knows what you want only from its task.", { tasks: { type: "array", items: STR }, effort: { type: "string", enum: EFFORTS, description: "How hard they think; by default, as hard as you." } }, ["tasks"]),
@@ -356,6 +357,28 @@ export namespace Tools {
       }
       case "date": {
         return { text: Memory.date(mem, Number(args.id)), fail: false };
+      }
+      case "search": {
+        const query = String(args.query ?? "").trim();
+        if (query === "") {
+          return { text: "Give a word or a phrase to search for.", fail: true };
+        }
+        let found: ReturnType<typeof Memory.search>;
+        try {
+          found = Memory.search(mem, query, {
+            regex: args.regex === true,
+            since : args.since === undefined ? undefined : String(args.since),
+            until : args.until === undefined ? undefined : String(args.until),
+            limit : args.limit === undefined ? 20 : Number(args.limit),
+          });
+        } catch (err: any) {
+          return { text: "That doesn't read as a regular expression: " + (err?.message ?? err), fail: true };
+        }
+        if (found.hits.length === 0) {
+          return { text: "Nothing in this chat matches \"" + query + "\".", fail: false };
+        }
+        const lines = found.hits.map((hit) => "#" + hit.id + " " + hit.date.slice(0, 10) + " " + hit.kind + ": " + hit.text);
+        return { text: lines.join("\n") + (found.more ? "\n(more matched: raise the limit, or narrow it with since and until.)" : "") + "\n", fail: false };
       }
       case "spawn": {
         const effort = args.effort === undefined ? null : String(args.effort);

@@ -1,0 +1,40 @@
+# The tests and the types, on every push and pull request (run by hand
+# from Actions too). A change to the site's source that is not rebuilt
+# into web/app.js is caught here: the bundle is rebuilt and compared
+# without the minifier's own choice of names, which differs between Bun
+# patch releases and says nothing about the code.
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .tool-versions
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: types
+        run: bun run check
+      - name: tests
+        run: bun run test
+      - name: the site's bundle is the source's
+        run: |
+          cp web/app.js "$RUNNER_TEMP/app.before.js"
+          bun run web
+          if ! diff -q "$RUNNER_TEMP/app.before.js" web/app.js > /dev/null; then
+            # the same program, named otherwise by the minifier: compare the
+            # text with identifiers normalised, and fail only on a real change
+            norm() { sed -E 's/\b[a-zA-Z_$][a-zA-Z0-9_$]*\b/ID/g' "$1"; }
+            if ! diff -q <(norm "$RUNNER_TEMP/app.before.js") <(norm web/app.js) > /dev/null; then
+              echo "web/app.js is not what web/src builds: run \`bun run web\` and commit it"
+              exit 1
+            fi
+            echo "web/app.js differs only in minifier names: not rebuilt, and that is fine"
+          fi

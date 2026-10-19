@@ -183,6 +183,10 @@ const SPARE      = 2 ** 30;
 // the acts with a body (Chat.post)
 const BODIES     = ["say", "import", "voice"];
 
+// the most a request's body may be: a message's pages and its images, or
+// an export's zip, which is read a page at a time and never held whole
+const BODY       = 1024 ** 3;
+
 // a read of a body: a buffer, no limit
 const READ       = 2 ** 20;
 
@@ -209,6 +213,10 @@ const FLOOD      = 1008;
 // may hold an unfinished message up to View.FRAME
 const SOCKETS    = 32;
 
+// the longest goal a chat keeps (its text goes in every call's prompt, and
+// in view.json): past it the act is refused, never silently cut
+const GOAL_MAX   = 4000;
+
 // what a network (Cloud.net: an IPv4 address, an IPv6 /48) may ask of the
 // site: 1,000 requests at once, 100 more a second; past it the supervisor
 // answers 429, so no worker hears it. A page opens in ~10, then lives on
@@ -232,10 +240,12 @@ const AUDIO      = 750;
 // holds no credential a screenshot could leak
 const HELLO      = hello_md.trim().replace("{install}", config.SITE + "/install.sh");
 
-// the site's files, by path (a new one is imported above)
+// the site's files, by path (a new one is imported above). Bun's type for
+// `*.html` says HTMLBundle; a `type: "file"` import is the path the
+// binary carries (checked: the value is a string), which Bun.file takes
 const WEB: Record<string, string> = {
-  "/"               : index_html,
-  "/account"        : index_html,
+  "/"               : index_html as unknown as string,
+  "/account"        : index_html as unknown as string,
   "/app.js"         : app_js,
   "/experimental.jpg": experimental_jpg,
   "/favicon.svg"    : mark_svg,
@@ -307,6 +317,9 @@ export namespace Chat {
       Chat.note(chat, saved + " isn't offered here, so the chat now runs on " + Pick.label(pick) + ".");
     }
     mem.pay = tools.pay = wallet.pay;
+    if (mem.warn !== undefined) {
+      Chat.note(chat, mem.warn);
+    }
     if (mem.count === 0) {
       const hello = HELLO + "\n\n" + email_ask(cloud.billing.github !== null);
       Memory.push(mem, [{ kind: "unii", text: hello, line: HELLO_LINE }, { kind: "user", text: user.name }, { kind: "unii", text: SIGNED }]);
@@ -469,7 +482,7 @@ export namespace Chat {
     if (typeof pay === "string") {
       return { error: pay };
     }
-    const got = await OpenAI.transcribe(new Blob([await Chat.read(body, 0, body.size)], { type })).catch((err: Error) => err);
+    const got = await OpenAI.transcribe(new Blob([new Uint8Array(await Chat.read(body, 0, body.size))], { type })).catch((err: Error) => err);
     if (got instanceof Error) {
       pay?.end(null);
       return { error: got.message };
@@ -958,7 +971,7 @@ export namespace Chat {
     const dir = config.DIR + "/users/";
     for (const id of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
       const user = Main.shard(id) === Main.index ? Cloud.user(Chat.cloud, id) : null;
-      if (user !== null && ((Memory.saved(dir + id)?.work ?? []).length > 0 || fs.existsSync(dir + id + BATCH))) {
+      if (user !== null && ((Memory.saved(dir + id).kept?.work ?? []).length > 0 || fs.existsSync(dir + id + BATCH))) {
         Main.event("waking the chat of user " + id, () => Chat.open(user));
       }
     }
@@ -1017,7 +1030,8 @@ export namespace Chat {
     Tools.take(chat.tools, moved.tools, far);
     Memory.take(chat.mem, moved.sums, (id, bill) => far(id, () => {}, bill));
     if (turn.busy) {
-      const run = call === null ? null : (chat.call = far(call, (ev) => Chat.on(chat, null, ev), chat.mem.pay?.("chat", String(turn.sent[0].id))));
+      const bill = turn.sent.length === 0 ? undefined : chat.mem.pay?.("chat", String(turn.sent[0].id));
+      const run = call === null ? null : (chat.call = far(call, (ev) => Chat.on(chat, null, ev), bill));
       const checking = check ? { call: far(check.call, () => {}, chat.mem.pay?.("chat", "goal")), goal: check.goal } : null;
       Chat.turn(chat, run ? Chat.ended(chat, run, chat.halt) : checking && Chat.checked(chat, checking, chat.halt));
     }
@@ -1225,7 +1239,10 @@ export namespace Chat {
         return {};
       }
       case "goal": {
-        const goal = msg.text === null ? null : String(msg.text);
+        const goal = typeof msg.text === "string" ? msg.text : null;
+        if (goal !== null && goal.length > GOAL_MAX) {
+          return { error: "A goal is at most " + GOAL_MAX + " characters: say the rest in the chat.", status: 413 };
+        }
         if (goal === chat.mem.goal) {
           return {};
         }
@@ -1502,12 +1519,12 @@ export namespace Main {
     const mem = chat.mem;
     switch (p) {
       case "/tree": {
-        return new Response(Main.stream(Memory.page(mem)), { headers: { "content-type": "text/html; charset=utf-8" } });
+        return new Response(Main.stream(Memory.page(mem)) as unknown as BodyInit, { headers: { "content-type": "text/html; charset=utf-8" } });
       }
       case "/export": {
         const name = "unii-memory-" + new Date().toISOString().slice(0, 10) + ".json";
         const json = { "content-type": "application/json", "content-disposition": 'attachment; filename="' + name + '"' };
-        return new Response(Main.stream(Memory.dump(mem, await Cloud.data(Chat.cloud, user))), { headers: json });
+        return new Response(Main.stream(Memory.dump(mem, await Cloud.data(Chat.cloud, user))) as unknown as BodyInit, { headers: json });
       }
       case "/api/act": {
         if (req.method !== "POST") {
@@ -1683,7 +1700,7 @@ export namespace Main {
       hostname           : "127.0.0.1",
       reusePort          : true,
       idleTimeout        : 0,
-      maxRequestBodySize : Infinity,
+      maxRequestBodySize : BODY,
       fetch              : Main.reply,
       websocket          : {
         maxPayloadLength         : FRAME,
@@ -1883,7 +1900,10 @@ export namespace Main {
         if (moved.credit !== undefined) {
           Chat.cloud.billing.credit.set(moved.user, moved.credit);
         }
-        const chat = Chat.open({ id: moved.user, name: "" }, moved, peer);
+        let chat: Chat | null = null;
+        Main.event("the chat of user " + moved.user + " arriving", () => {
+          chat = Chat.open({ id: moved.user, name: "" }, moved, peer);
+        });
         if (chat !== null && Main.given) {
           Chat.give(chat, Main.next!, Main.onward);
         }

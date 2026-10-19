@@ -25,6 +25,7 @@ config.KEYS.anthropic = "test";
 
 const { Agent } = await import("./Agent.ts");
 const { AskAI } = await import("./AskAI.ts");
+import type { Grant } from "./AskAI.ts";
 const { Memory } = await import("./Memory.ts");
 const { MASTER } = await import("./Tools.ts");
 
@@ -195,7 +196,7 @@ test("a request leads single flight only as it is sent", () => fast(async () => 
   const asked: string[] = [];
   const vend = globalThis.fetch;
   globalThis.fetch = ((url: string, init: any) => (asked.push(JSON.parse(init.body).messages[0].content.at(-1).text), vend(url, init))) as any;
-  const holds = { payer: { bill: () => new Promise((ok) => (pay = () => ok(grant))) }, yields: { yields: DIR } };
+  const holds = { payer: { bill: () => new Promise<Grant | string>((ok) => (pay = () => ok(grant))) }, yields: { yields: DIR } };
   for (const [why, hold] of Object.entries(holds)) {
     const blocks = (who: string) => [{ text: "<chat>\n" + why + "\n", mark: true }, { text: "</chat>\n", mark: false }, { text: who + " " + why, mark: false }];
     room.busy = why === "yields" ? 1 : 0;

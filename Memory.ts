@@ -94,8 +94,9 @@ type End = [number, number];
 // a view in view.json
 type Kept = { parts: Array<[number, number]>; batch: boolean };
 
-// view.json: the chat's view, the compactions' (none: the chat's)
-type Saved = Kept & { seen?: Kept; main: End; tree: End; pick: object | null; goal?: string | null; work?: string[] };
+// view.json: the chat's view, the compactions' (none: the chat's), and
+// the store's version (`v`; none: written before there was one)
+type Saved = Kept & { v?: number; seen?: Kept; main: End; tree: End; pick: object | null; goal?: string | null; work?: string[] };
 
 // fds: files read lately, open, oldest first; count: the pages logged
 // whole; open: those after, not whole yet; pick: the chat's, as last set;
@@ -129,6 +130,7 @@ export type Memory = {
   calls  : Map<Call, Sum>;
   hold   : Array<string | null>;
   done   : boolean;
+  warn?  : string;
   wait   : Set<() => void>;
   share  : () => Share;
   pay?   : Pay;
@@ -141,6 +143,9 @@ export type Memory = {
 
 const NODE  = 512;
 export const JOBS = 64;
+// the store's version, kept in view.json (`v`): a newer one is refused,
+// never guessed at, so an old server cannot half-read a new chat
+const STORE = 1;
 const TRIES = 5;
 // a view past its `high` merges to half: the chat's 64-128 KB (96 KB on
 // average), the compactions' 16-32 KB (24 KB)
@@ -200,7 +205,11 @@ export namespace Memory {
       view: { parts: [], size: 0, batch: false, high: HIGH }, seen: { parts: [], size: 0, batch: false, high: SEEN },
       busy: new Map(), sides: new Map(), calls: new Map(), hold: [null, "paused"], done: false, wait: new Set(), share, acted,
     };
-    const saved = Memory.saved(dir);
+    const { kept, bad } = Memory.saved(dir);
+    if ((kept?.v ?? 0) > STORE) {
+      throw new Error("this chat was written by a newer unii (store " + kept!.v + " > " + STORE + "): update this one before opening it");
+    }
+    const saved = kept;
     mem.pick = saved?.pick ?? null;
     mem.goal = saved?.goal ?? null;
     mem.work = saved?.work ?? [];
@@ -214,16 +223,29 @@ export namespace Memory {
     Memory.open(mem, mem.seen, saved?.seen ?? saved);
     Memory.roots(mem.count).flatMap((part) => Memory.todo(mem, part)).forEach((part) => Memory.ready(mem, part, true));
     Memory.fit(mem);
+    if (bad) {
+      mem.warn = "This chat's view file was unreadable: it was kept beside it, and the view, the model and the goal were rebuilt.";
+    }
     Memory.save(mem);
     return mem;
   }
 
-  // view.json; null: none, or unreadable
-  export function saved(dir: string): Saved | null {
+  // view.json; none: absent, or unreadable (moved aside, never overwritten
+  // as if it were absent: the pick, the goal and the view are the chat's)
+  export function saved(dir: string): { kept: Saved | null; bad: boolean } {
+    let text: string;
     try {
-      return JSON.parse(fs.readFileSync(dir + "/view.json", "utf8"));
+      text = fs.readFileSync(dir + "/view.json", "utf8");
     } catch {
-      return null;
+      return { kept: null, bad: false };
+    }
+    try {
+      return { kept: JSON.parse(text), bad: false };
+    } catch {
+      const at = dir + "/view.json.bad-" + Date.now();
+      fs.renameSync(dir + "/view.json", at);
+      console.error("view.json of " + dir + " was unreadable: kept as " + at);
+      return { kept: null, bad: true };
     }
   }
 
@@ -239,7 +261,7 @@ export namespace Memory {
   export function save(mem: Memory): void {
     const file = mem.dir + "/view.json";
     const [chat, seen] = [mem.view, mem.seen].map((view): Kept => ({ parts: view.parts.map((part) => [part.l, part.i]), batch: view.batch }));
-    fs.writeFileSync(file + ".new", JSON.stringify({ ...chat, seen, pick: mem.pick, goal: mem.goal, work: mem.work, ...mem.ends }));
+    fs.writeFileSync(file + ".new", JSON.stringify({ v: STORE, ...chat, seen, pick: mem.pick, goal: mem.goal, work: mem.work, ...mem.ends }));
     fs.renameSync(file + ".new", file);
     Disk.wrote(file);
   }

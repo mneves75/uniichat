@@ -58,6 +58,9 @@ const ACTS = 7 * 864e5;
 
 const LINK    = 15 * 60 * 1000;
 const WAIT    = 5 * 60 * 1000;
+// the codes a link's page takes before the link is spent: the code is 8
+// digits, and a wrong one never leaves the page free to try again
+const TRIES   = 5;
 
 // sign-in links by address at once (no one mails a victim links; a ticket used
 // up leaves the count), and by network a SPAN (no one drains the mail quota):
@@ -214,11 +217,34 @@ export namespace Cloud {
     return row === null ? null : JSON.parse(row.data);
   }
 
-  // the six digits a terminal sign-in shows and the user types on the
+  // the eight digits a terminal sign-in shows and the user types on the
   // confirm page: proof they hold that terminal (in no email); derived
   // from the session, so nothing extra is stored
   export function code(session: string): string {
-    return (parseInt(session.slice(0, 8), 16) % 1e6).toString().padStart(6, "0");
+    return (parseInt(session.slice(0, 8), 16) % 1e8).toString().padStart(8, "0");
+  }
+
+  // whether a typed code is the one the terminal shows, compared in a
+  // time that does not say how much of it was right
+  export function same(typed: string, code: string): boolean {
+    return typed.length === code.length && crypto.timingSafeEqual(Buffer.from(typed), Buffer.from(code));
+  }
+
+  // a wrong code on a ticket: counted, and when they run out the ticket
+  // is gone (no other way on than a link asked for anew). false: spent
+  export function attempt(cloud: Cloud, token: string): boolean {
+    const hash = Cloud.hash(token);
+    const row = cloud.db.query("select data from tickets where hash = ? and expires >= ?").get(hash, Date.now()) as { data: string } | null;
+    if (row === null) {
+      return false;
+    }
+    const data = { ...JSON.parse(row.data), tries: (JSON.parse(row.data).tries ?? 0) + 1 };
+    if (data.tries > TRIES) {
+      cloud.db.query("delete from tickets where hash = ?").run(hash);
+      return false;
+    }
+    cloud.db.query("update tickets set data = ? where hash = ?").run(JSON.stringify(data), hash);
+    return true;
   }
 
   // Account
@@ -438,7 +464,10 @@ export namespace Cloud {
     if (link === null || link.session === null) {
       return Cloud.expired();
     }
-    if (typed !== Cloud.code(link.session)) {
+    if (!Cloud.same(typed, Cloud.code(link.session))) {
+      if (!Cloud.attempt(cloud, t)) {
+        return Cloud.burnt();
+      }
       return Cloud.page_confirm(t, link.who, github, "That code didn't match. Check your terminal and try again.");
     }
     const account = await cloud.billing.account(link.who, github, req);
@@ -456,12 +485,19 @@ export namespace Cloud {
     return Response.redirect(config.SITE + "/?expired=1", 302);
   }
 
+  // the page a link's code was tried wrong too often: its ticket is gone
+  // (Cloud.attempt), so the only way on is a link asked for anew
+  export function burnt(): Response {
+    const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · UniiChat</title><link rel="stylesheet" href="/legal.css"></head><body><main><h1>Too many tries</h1><p>That link is spent. Ask for a new one, then type the code your terminal shows.</p></main></body></html>`;
+    return new Response(page, { status: 429, headers: { "content-type": "text/html; charset=utf-8" } });
+  }
+
   // the page a terminal's link opens (the email's, or GitHub's sign-in):
   // it asks for the code the terminal shows
   export function page_confirm(t: string, who: string, github: string, err: string): Response {
     const safe = (s: string) => s.replace(/[<>&"]/g, "");
     const note = err === "" ? "" : `<p class="err">${err}</p>`;
-    const body = `<h1>Finish signing in</h1><p>Enter the code shown in your terminal to sign in to <b>${safe(who)}</b>.</p>${note}<form method="post" action="/auth"><input type="hidden" name="t" value="${t}"><input type="hidden" name="github" value="${safe(github)}"><input name="code" inputmode="numeric" autocomplete="off" autofocus aria-label="code"><button type="submit">Confirm</button></form>`;
+    const body = `<h1>Finish signing in</h1><p>Enter the code shown in your terminal to sign in to <b>${safe(who)}</b>.</p>${note}<form method="post" action="/auth"><input type="hidden" name="t" value="${t}"><input type="hidden" name="github" value="${safe(github)}"><input name="code" inputmode="numeric" autocomplete="off" maxlength="8" autofocus aria-label="code"><button type="submit">Confirm</button></form>`;
     const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · UniiChat</title><link rel="stylesheet" href="/legal.css"></head><body><main>${body}</main></body></html>`;
     return new Response(page, { headers: { "content-type": "text/html; charset=utf-8" } });
   }

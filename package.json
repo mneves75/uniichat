@@ -1,8 +1,14 @@
 {
   "name": "uniichat",
   "private": true,
+  "packageManager": "bun@1.4.3",
   "scripts": {
+    "check": "tsc --noEmit",
     "test": "bun test --isolate",
     "web": "bun build web/src/main.ts --outfile web/app.js --target browser"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.3",
+    "typescript": "7.0.2"
   }
 }

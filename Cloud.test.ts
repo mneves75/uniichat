@@ -62,7 +62,7 @@ test("terminal sign-in needs the code the terminal shows", async () => {
   const session = Cloud.hash(key);
   const t = Cloud.ticket(cloud, { who: "t@x.com", session }, 60000);
   const code = Cloud.code(session);
-  expect(code).toMatch(/^\d{6}$/);
+  expect(code).toMatch(/^\d{8}$/);
   const post = (c: string) => new Request("http://127.0.0.1/auth", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ t, code: c }).toString() });
   const signed = () => cloud.db.query("select hash from sessions where hash = ?").get(session);
   const gh = Cloud.ticket(cloud, { who: "@x", session }, 60000);
@@ -71,10 +71,34 @@ test("terminal sign-in needs the code the terminal shows", async () => {
     expect(await page?.text()).toContain("Enter the code");
   }
   expect(signed()).toBeNull();
-  await Cloud.confirm(cloud, post(code === "000000" ? "111111" : "000000"));
+  await Cloud.confirm(cloud, post(code === "00000000" ? "11111111" : "00000000"));
   expect(signed()).toBeNull();
   await Cloud.confirm(cloud, post(code));
   expect(signed()).not.toBeNull();
+});
+
+// Six wrong codes spend the link: the seventh try is refused, and even the
+// right code then signs in nothing. A guess has four wrong tries' room,
+// never the aeon an eight-digit code with unlimited tries has.
+test("wrong codes spend the link, and the right one is then no good", async () => {
+  const cloud = cloud_new();
+  const session = Cloud.hash(Cloud.random());
+  const t = Cloud.ticket(cloud, { who: "b@x.com", session }, 60000);
+  const code = Cloud.code(session);
+  const wrong = (k: number) => String((Number(code) + k) % 1e8).padStart(8, "0");
+  const post = (c: string) => new Request("http://127.0.0.1/auth", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ t, code: c }).toString() });
+  const signed = () => cloud.db.query("select hash from sessions where hash = ?").get(session);
+  for (let k = 1; k <= 5; k++) {
+    const res = await Cloud.confirm(cloud, post(wrong(k)));
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("didn't match");
+  }
+  const burnt = await Cloud.confirm(cloud, post(wrong(6)));
+  expect(burnt.status).toBe(429);
+  expect(await burnt.text()).toContain("Too many tries");
+  const late = await Cloud.confirm(cloud, post(code));
+  expect(late.headers.get("location")).toContain("expired");
+  expect(signed()).toBeNull();
 });
 
 // An emailed link signs in each time it is opened until it expires: a

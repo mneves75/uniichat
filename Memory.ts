@@ -1314,6 +1314,8 @@ h4 { margin: .8em 0 .2em; color: #888; font-weight: normal; } pre { margin: 0; w
       }
     }
     const orphans = fs.existsSync(images) ? fs.readdirSync(images).filter((name) => !named.has(name) && !named.has(name.replace(/\.jpg$/, ""))) : [];
+    mem.fds.forEach((fd) => fs.closeSync(fd));
+    mem.fds.clear();
     return { faults: out, orphans };
   }
 

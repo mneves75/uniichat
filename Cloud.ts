@@ -238,7 +238,8 @@ export namespace Cloud {
     if (row === null) {
       return false;
     }
-    const data = { ...JSON.parse(row.data), tries: (JSON.parse(row.data).tries ?? 0) + 1 };
+    const data = JSON.parse(row.data);
+    data.tries = (data.tries ?? 0) + 1;
     if (data.tries > TRIES) {
       cloud.db.query("delete from tickets where hash = ?").run(hash);
       return false;

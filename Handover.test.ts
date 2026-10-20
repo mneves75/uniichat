@@ -19,48 +19,44 @@
 import { afterAll, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
-import { WIRE } from "./View.ts";
 
-const DIRS: string[] = [];
+// one store, set before anything of the server's is imported: Config reads
+// UNII_DIR at import, and a test may not touch the one in the home directory
+// (on a CI runner there is none)
+const ROOT = fs.mkdtempSync(os.tmpdir() + "/unii-handover-");
+process.env.UNII_DIR = ROOT;
+process.env.UNII_SITE = "http://127.0.0.1";
 
-afterAll(() => DIRS.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
+const { WIRE } = await import("./View.ts");
+const { Memory } = await import("./Memory.ts");
+const { Cloud } = await import("./Cloud.ts");
 
-// a store of `n` messages for user `u`, and a session for it, written before
-// the server reads the dir (its own process, so no config is cached)
-function seed(dir: string, token: string): void {
-  const script = `
-    import { Memory } from "./Memory.ts";
-    import { Cloud } from "./Cloud.ts";
-    const dir = process.argv[1] + "/users/u";
-    require("node:fs").mkdirSync(dir, { recursive: true });
-    const mem = Memory.load(dir, () => ({ vendor: "claude-api", model: "sonnet", effort: "medium", speed: "slow", system: "", searches: 0, server: "" }));
-    mem.hold = ["test", "paused"];
-    for (const text of ["first", "second", "third"]) Memory.push(mem, [{ kind: "user", text }]);
-    Memory.save(mem);
-    const cloud = Cloud.open(() => {}, () => {}, async () => null);
-    cloud.db.query("insert or replace into sessions values (?, ?, ?)").run(Cloud.hash(${JSON.stringify(token)}), "u", "you@example.com");
-  `;
-  // its own UNII_DIR: the session must go into the store the server reads,
-  // not into the home directory (CI has none, and a test may not use it)
-  const out = Bun.spawnSync([process.execPath, "-e", script, dir], {
-    cwd   : import.meta.dir,
-    env   : { ...process.env, UNII_DIR: dir, UNII_SITE: "http://127.0.0.1" },
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  if (out.exitCode !== 0) {
-    throw new Error("seed failed: " + out.stderr.toString());
+afterAll(() => fs.rmSync(ROOT, { recursive: true, force: true }));
+
+// a chat of three messages and a session for it, before the server starts
+function seed(token: string): void {
+  const dir = ROOT + "/users/u";
+  fs.mkdirSync(dir, { recursive: true });
+  const mem = Memory.load(dir, () => ({ vendor: "claude-api", model: "sonnet", effort: "medium", speed: "slow", system: "", searches: 0, server: "" }));
+  mem.hold = ["test", "paused"];
+  for (const text of ["first", "second", "third"]) {
+    Memory.push(mem, [{ kind: "user", text }]);
   }
+  Memory.save(mem);
+  const cloud = Cloud.open(() => {}, () => {}, async () => null);
+  cloud.db.query("insert or replace into sessions values (?, ?, ?)").run(Cloud.hash(token), "u", "you@example.com");
+  // closed before the server opens it: one writer at a time is the rule
+  cloud.db.close();
 }
 
-// the messages the store holds, from the index the server writes
-function count(dir: string): number {
-  const at = dir + "/users/u/main.index";
+// the messages the store holds, from the index
+function count(): number {
+  const at = ROOT + "/users/u/main.index";
   return fs.existsSync(at) ? fs.statSync(at).size / 16 : 0;
 }
 
-// a socket opened, its first answer and its close, as they come
-function socket(port: number, token: string): { opened: Promise<void>; first: Promise<any>; closed: Promise<number>; send: (text: string) => void; close: () => void } {
+// a socket opened, the chat's view heard, and its close code, as they come
+function socket(port: number, token: string): { opened: Promise<void>; first: Promise<any>; closed: Promise<number>; close: () => void } {
   // a worker's own port: the supervisor only routes (a proxy in front reaches
   // the worker the answer names), so a socket goes to the worker directly
   const ws = new WebSocket("ws://127.0.0.1:" + port + "/ws?tab=1&wire=" + WIRE, { headers: { cookie: "unii=" + token } } as any);
@@ -68,40 +64,36 @@ function socket(port: number, token: string): { opened: Promise<void>; first: Pr
     ws.onopen = () => ok();
     ws.onerror = () => bad(new Error("the socket would not open"));
   });
-  // the chat's own messages, as they come (a socket hears state, notes and
-  // pings before and around the view)
-  const heard: any[] = [];
+  const heard: string[] = [];
   const waiters: Array<(msg: any) => void> = [];
   const first = new Promise<any>((ok, bad) => {
     waiters.push(ok);
-    setTimeout(() => bad(new Error("no view or know in 10 s; heard: " + heard.map((m) => m.$).join(", "))), 10000).unref();
+    setTimeout(() => bad(new Error("no view or know in 10 s; heard: " + heard.join(", "))), 10000).unref();
   });
   ws.onmessage = (event) => {
     const msg = JSON.parse(String(event.data));
-    heard.push(msg);
+    heard.push(String(msg.$));
     if (msg.$ === "view" || msg.$ === "know") {
-      waiters.splice(0).forEach((ok) => ok(msg));
+      waiters.splice(0).forEach((done) => done(msg));
     }
   };
   const closed = new Promise<number>((ok) => {
     ws.onclose = (event) => ok(event.code);
   });
-  return { opened, first, closed, send: (text: string) => ws.send(text), close: () => ws.close() };
+  return { opened, first, closed, close: () => ws.close() };
 }
 
 test("a chat with state survives a deploy: SIGHUP moves it, and its page with it", async () => {
-  const dir = fs.mkdtempSync(os.tmpdir() + "/unii-handover-");
-  DIRS.push(dir);
   // far from the ports a person starts by hand (9491/9492 here): a worker
   // takes port + 1, and a stale server on it makes this a 401, not a handover
   const port = 9531;
   const site = "http://127.0.0.1:" + port;
   const token = "handover-token";
-  seed(dir, token);
-  expect(count(dir)).toBe(3);
+  seed(token);
+  expect(count()).toBe(3);
 
   const proc = Bun.spawn([process.execPath, import.meta.dir + "/Server.ts", String(port)], {
-    env    : { ...process.env, UNII_DIR: dir, UNII_SITE: site, UNII_WORKERS: "1" },
+    env    : { ...process.env, UNII_DIR: ROOT, UNII_SITE: site, UNII_WORKERS: "1" },
     stdout : "ignore",
     stderr : "pipe",
   });
@@ -135,10 +127,10 @@ test("a chat with state survives a deploy: SIGHUP moves it, and its page with it
     expect(code).toBe(4001);
 
     // the chat is where it was, and a page that reconnects finds it
-    for (let k = 0; k < 40 && count(dir) !== 3; k++) {
+    for (let k = 0; k < 40 && count() !== 3; k++) {
       await Bun.sleep(100);
     }
-    expect(count(dir)).toBe(3);
+    expect(count()).toBe(3);
     const again = socket(port + 1, token);
     await again.opened;
     const back = await again.first;

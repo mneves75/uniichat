@@ -33,6 +33,13 @@ export namespace Journal {
     console.error(Journal.format(level, what));
   }
 
+  // a line for the operator's eyes, not a log: a sign-in link is a
+  // credential, and the journal's own advice is to rotate it to a file. It
+  // goes to stdout, where a person is already looking.
+  export function person(text: string): void {
+    console.log(text);
+  }
+
   export function info(what: string): void {
     Journal.write("info", what);
   }

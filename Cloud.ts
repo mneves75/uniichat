@@ -523,7 +523,9 @@ export namespace Cloud {
 
   export async function mail(cloud: Cloud, to: string, link: string, terminal: boolean): Promise<void> {
     if (!config.KEYS.resend) {
-      Journal.info("sign-in link for " + to + ": " + link);
+      // no mail key: the only way in is to see this line, so it is printed
+      // for a person, not written to the journal a rotator keeps
+      Journal.person("Sign in as " + to + ": " + link);
       return;
     }
     const ignore = terminal ? "This link signs a unii terminal into your account. If you didn't just start one, ignore this email." : "If you didn't ask for it, ignore this email.";

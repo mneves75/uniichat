@@ -27,11 +27,21 @@ const ROOT = fs.mkdtempSync(os.tmpdir() + "/unii-handover-");
 process.env.UNII_DIR = ROOT;
 process.env.UNII_SITE = "http://127.0.0.1";
 
-const { WIRE } = await import("./View.ts");
+const { WIRE, TICK } = await import("./View.ts");
 const { Memory } = await import("./Memory.ts");
 const { Cloud } = await import("./Cloud.ts");
 
-afterAll(() => fs.rmSync(ROOT, { recursive: true, force: true }));
+// every server this file started, so a throw in an event handler (where a
+// test's `finally` never runs) cannot leave one holding the port
+const SPAWNED: Array<{ proc: Bun.Subprocess }> = [];
+
+afterAll(async () => {
+  for (const { proc } of SPAWNED) {
+    proc.kill("SIGTERM");
+    await proc.exited;
+  }
+  fs.rmSync(ROOT, { recursive: true, force: true });
+});
 
 // a chat of three messages and a session for it, before the server starts
 function seed(token: string): void {
@@ -58,7 +68,9 @@ function count(): number {
 // a socket opened, the chat's view heard, and its close code, as they come
 function socket(port: number, token: string): { opened: Promise<void>; first: Promise<any>; closed: Promise<number>; close: () => void } {
   // a worker's own port: the supervisor only routes (a proxy in front reaches
-  // the worker the answer names), so a socket goes to the worker directly
+  // the worker the answer names), so a socket goes to the worker directly.
+  // Bun's client takes `headers` in its second argument, which its type does
+  // not say (it types it as protocols).
   const ws = new WebSocket("ws://127.0.0.1:" + port + "/ws?tab=1&wire=" + WIRE, { headers: { cookie: "unii=" + token } } as any);
   const opened = new Promise<void>((ok, bad) => {
     ws.onopen = () => ok();
@@ -71,6 +83,13 @@ function socket(port: number, token: string): { opened: Promise<void>; first: Pr
     setTimeout(() => bad(new Error("no view or know in 10 s; heard: " + heard.join(", "))), 10000).unref();
   });
   ws.onmessage = (event) => {
+    // a bare tick every PING/2 is not JSON, and the page skips it too
+    // (View.ts: `if (ev.data === TICK) return`): parsing it threw in an event
+    // handler, where a test's `finally` never runs, and left the supervisor
+    // and its worker holding the port for every run after
+    if (String(event.data) === TICK) {
+      return;
+    }
     const msg = JSON.parse(String(event.data));
     heard.push(String(msg.$));
     if (msg.$ === "view" || msg.$ === "know") {
@@ -97,6 +116,7 @@ test("a chat with state survives a deploy: SIGHUP moves it, and its page with it
     stdout : "ignore",
     stderr : "pipe",
   });
+  SPAWNED.push({ proc });
   try {
     for (let k = 0; k < 100; k++) {
       const res = await fetch(site + "/api/hello").catch(() => null);

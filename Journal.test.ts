@@ -22,7 +22,9 @@ test("the server logs through the journal, never around it, and never a person's
   const server = ["Server.ts", "Agent.ts", "Memory.ts", "Mail.ts", "Disk.ts", "Cloud.ts"];
   for (const name of server) {
     const source = fs.readFileSync(import.meta.dir + "/" + name, "utf8");
-    expect({ name, bare: source.match(/\bconsole\.(log|error|warn)\b/g) }).toEqual({ name, bare: null });
+    // every console method, not three of them: `console.info` is how a
+    // "bare console.*" claim becomes false
+    expect({ name, bare: source.match(/\bconsole\.[a-z]+\s*\(/g) }).toEqual({ name, bare: null });
     expect({ name, imports: source.includes('from "./Journal.ts"') }).toEqual({ name, imports: true });
   }
 });

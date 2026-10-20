@@ -1,14 +1,15 @@
 # UniiChat — review and improvement plan
 
-> **Status (v1.2.0).** Landed: A1-A5, A6 (installer checksum published and verified),
+> **Status (v1.4.1).** Landed: A1-A5, A6 (installer checksum published and verified),
 > B1-B4 (tsconfig, CI, Bun pin, non-forgeable limit key), C1 (store version + geometry),
 > C2 (`Memory.faults` + `Doctor.ts`), C3 (`Backup.ts` save/restore), C4 (`Gc.ts`, images only),
 > C5 partly (log/tiling/slots/version/corruption/torn line/search/faults/geometry — no SIGKILL
 > suite), C8 (`Agent.gate`), D2 (`/health`), D4 (release artifacts with checksums),
 > E1 (`search`, with newest-first from the literature pass), E3 (the site, as design).
 > **Where it is:** pushed to the fork `mneves75/uniichat`; CI green on Linux;
-> **staged** as `v1.3.0-beta1` (prerelease, 4 binaries + installer + checksums)
-> and **released** as `v1.3.0`, a downloaded artifact verified and running.
+> **staged** as `v1.4.1-beta1` (prerelease, 4 binaries + installer + checksums)
+> and **released** as `v1.4.1`, a downloaded artifact verified and running
+> (1.3.0 and 1.4.0 came before it).
 > Not merged upstream: `VictorTaelin/UniiChat` is not mine to push to.
 > **Not done:** the in-flight-call half of D3 (a turn running when the handover starts): no
 > vendor URL is configurable, and adding one to make a test possible would put a way to redirect

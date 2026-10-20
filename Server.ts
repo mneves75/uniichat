@@ -1670,7 +1670,7 @@ export namespace Main {
     try {
       run();
     } catch (err: any) {
-      Journal.error("unii: " + what + " failed: " + (err?.stack ?? err));
+      Journal.error(what + " failed: " + (err?.stack ?? err));
       fail();
     }
   }
@@ -1834,7 +1834,7 @@ export namespace Main {
   // it (a chat's note, a log line), so this is a bug, logged, never the
   // end of the worker and every chat it holds
   export function unowned(err: unknown): void {
-    Journal.error("unii: a failure no one owned: " + ((err as any)?.stack ?? err));
+    Journal.error("a failure no one owned: " + ((err as any)?.stack ?? err));
   }
 
   // a worker hears its supervisor
@@ -1942,7 +1942,7 @@ export namespace Main {
           peer.send({ $: "users", addr: Main.addr, users: [...Chat.chats.keys(), ...Main.coming.keys()] });
           [...Chat.chats.values()].forEach((chat) => Chat.give(chat, peer, msg.tools));
           Main.done();
-        }).catch((err) => Journal.error("unii: giving the chats failed: " + (err?.stack ?? err)));
+        }).catch((err) => Journal.error("giving the chats failed: " + (err?.stack ?? err)));
         return;
       }
       case "users": {
@@ -2233,7 +2233,7 @@ export namespace Main {
   // k's again; one that never started (none is), the server ends
   export function died(k: number, code: number | null, now: Bun.Subprocess | undefined, proc: Bun.Subprocess, again: () => void): void {
     if (code !== 0) {
-      Journal.error("unii: worker " + k + " ended (" + code + ")");
+      Journal.error("worker " + k + " ended (" + code + ")");
     }
     if (Main.leaving || (now !== undefined && now !== proc)) {
       return;

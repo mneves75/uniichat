@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.4.1
+
+Six fixes from the independent pass on 1.4.0, one of them the kind that only a
+reviewer outside the build finds.
+
+### Fixed
+
+- **A sign-in link was written to the journal.** With no mail key set, the
+  link was logged — and 1.4.0's own advice is to send stderr through
+  `newsyslog`/`logrotate`, which turns a credential into a file. It is printed
+  to stdout as a line for a person (`Journal.person`), and the journal says
+  only that a link was printed. `Journal.ts`'s header now names the one
+  exception to "not a message to a person".
+- **A doubled prefix**: four lines in `Server.ts` said `unii: …` themselves,
+  and the journal adds it, so the log read `unii: error: unii: worker 1 ended`.
+- **`Journal.test.ts` guarded three console methods, not all of them**: the
+  claim in CHANGELOG and AGENTS.md was wider than the regex
+  (`console.info(...)` passed). It now fails on any `console.<method>(`.
+- **`Handover.test.ts` parsed the server's `+` tick as JSON.** A socket that
+  lived past five seconds (a slow handover, a loaded CI) threw in an event
+  handler, where a test's `finally` never runs — orphaning the supervisor and
+  its worker on the fixed ports 9531/9532 for every run after. It skips the
+  tick as the page does, and every server it starts is killed in `afterAll`.
+  Its `SIGHUP` mutation now fails on the MOVE assertion instead of the parse
+  error.
+- `PLAN.md` said the last release was 1.3.0.
+- The test's `WebSocket` cast now says why (Bun takes `headers` in the second
+  argument, which its type calls protocols).
+
 ## 1.4.0
 
 ### Added

@@ -51,8 +51,10 @@ means changing its spec, its `Call.ts` line, its `Theme.ts` glyph, its
   is no `~/.unii` (the run failed with `SQLITE_CANTOPEN` while passing here).
 - **Write to the journal, not the console.** `Server.ts`, `Agent.ts`,
   `Memory.ts`, `Mail.ts`, `Disk.ts` and `Cloud.ts` go through `Journal`
-  (`Journal.test.ts` fails on a bare `console.*` there). A message a person
-  must read is `Chat.note` or a view row, never a log line.
+  (`Journal.test.ts` fails on any bare `console.*` there). A message a person
+  must read is `Chat.note` or a view row, never a log line — except
+  `Journal.person`, which writes stdout for the one thing an operator has to
+  see and no file should keep (the sign-in link on a server with no mail key).
 - **A one-shot command ends with `Disk.quit()`**: on Linux `Disk` keeps a
   `sh` for `syncfs` and that child keeps the runtime alive, so a CLI that only
   sets `process.exitCode` never returns to the shell.

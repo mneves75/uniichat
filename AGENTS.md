@@ -11,10 +11,11 @@ bun run check    # tsc --noEmit, strict
 bun run test     # bun test --isolate
 bun Doctor.ts    # a store's files: view tiles, nodes exist, images present
 bun Backup.ts save <chat> <to>   # a checked snapshot (restore into an empty dir)
+bun bench/recall.ts --check      # retrieval: recall@5, staleness, paging, p95
 ```
 
-CI (`.github/workflows/ci.yml`) runs the first two, and rebuilds
-`web/app.js` to check it is what `web/src` builds.
+CI (`.github/workflows/ci.yml`) runs the types, the tests, the retrieval
+harness, and rebuilds `web/app.js` to check it is what `web/src` builds.
 
 ## Where the design lives
 

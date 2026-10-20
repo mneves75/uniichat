@@ -11,8 +11,10 @@
   and the honest gap — a question whose words never appear together gets
   **0 hits**. `--check` fails below 95% recall/staleness or above 300 ms.
 - **Render goldens** (`Render.test.ts`, `__snapshots__/`): the site's markup
-  and the terminal's text for every message kind, so `Call.ts` and the CSS
-  surface have a gate that fails on purpose.
+  and the terminal's text for every message kind: a gate on `Call.ts` (0% of
+  functions before) and on the markup's structure and class names, which fails
+  on purpose when either moves. `Style.test.ts` is the CSS gate, and only for
+  a custom property declared twice in one scope.
 - **Wire replay** (`Wire.test.ts`): both vendors' streams, event by event —
   text in pieces, a tool call whose JSON arrives in pieces, `pause_turn`,
   refusals, incomplete responses, error events, and a cut stream. A malformed

@@ -249,6 +249,8 @@ export namespace Cloud {
   // is gone (no other way on than a link asked for anew). false: spent
   export function attempt(cloud: Cloud, token: string): boolean {
     const hash = Cloud.hash(token);
+    // bun:sqlite hands a row back as unknown: this query names one column,
+    // `data`, a TEXT the ticket writes
     const row = cloud.db.query("select data from tickets where hash = ? and expires >= ?").get(hash, Date.now()) as { data: string } | null;
     if (row === null) {
       return false;

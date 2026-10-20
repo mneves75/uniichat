@@ -85,6 +85,7 @@ test("a turn that moved before its first message was logged bills nothing", () =
   expect(Chat.billed(mem, [])).toBeUndefined();
   expect(billed).toEqual([]);
   // and one with a message bills that message, as before
+  // only its id is read: a turn's sent messages are Roots, which need a store
   expect(Chat.billed(mem, [{ kind: "user", text: "hi", id: 7 } as never])).toBeDefined();
   expect(billed).toEqual(["7"]);
 });

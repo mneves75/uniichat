@@ -10,8 +10,10 @@
 > **staged** as `v1.3.0-beta1` (prerelease, 4 binaries + installer + checksums)
 > and **released** as `v1.3.0`, a downloaded artifact verified and running.
 > Not merged upstream: `VictorTaelin/UniiChat` is not mine to push to.
-> **Not done:** D1 (structured logs), D3 (handover under load). C6 (render goldens), C7 (wire
-> replay), E2 (recall harness) and E4 (iOS decision, ADR 0001) landed in 1.3.0. The advisor's ordering puts C6 and E2 first:
+> **Not done:** the in-flight-call half of D3 (a turn running when the handover starts): no
+> vendor URL is configurable, and adding one to make a test possible would put a way to redirect
+> a user's API key into every deployment. Everything else landed: D1 (the journal) and the
+> handover itself in 1.4.0; C6, C7, E2 and E4 (ADR 0001) in 1.3.0. The advisor's ordering puts C6 and E2 first:
 > C6 guards the CSS surface, E2 guards any further prompt revision. §9's "the prompt already
 > says the latest word wins" is corrected there.
 

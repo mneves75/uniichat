@@ -112,7 +112,9 @@ async function completes(mem: any): Promise<void> {
 async function fast(go: () => Promise<void>): Promise<void> {
   globalThis.setTimeout = ((go: () => void, ms = 0) => real.setTimeout(go, ms / 1000)) as any;
   globalThis.fetch = vendor as any;
-  console.error = (...args: unknown[]) => logged.push(args.join(" "));
+  // the journal's prefix is the journal's business (Journal.test.ts): these
+  // assert what was said, not how a line is shaped
+  console.error = (...args: unknown[]) => logged.push(args.join(" ").replace(/^unii: (info|warn|error): /, ""));
   logged.length = 0;
   try {
     await go();

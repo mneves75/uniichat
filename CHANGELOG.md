@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.4.0
+
+### Added
+
+- **A journal**: the server's own words as `unii: <level>: <what>` on stderr,
+  or one JSON object a line with `UNII_LOG=json` (`{ at, level, what }`).
+  `Server.ts`, `Agent.ts`, `Memory.ts`, `Mail.ts`, `Disk.ts` and `Cloud.ts` all
+  go through it, and `Journal.test.ts` fails on a bare `console.*` in any of
+  them. Rotation stays with whatever starts the process — a process cannot
+  safely rename its own open stderr.
+- **A handover test** (`Handover.test.ts`): a real client, a seeded chat, a
+  worker under a supervisor, `SIGHUP`. It asserts the page is *moved*
+  (`MOVE`, 4001) rather than dropped, that the store still holds its three
+  messages, that a second socket is served the chat again, and that a second
+  `SIGHUP` while the first settles is not a crash. Removing the supervisor's
+  `SIGHUP` handler makes it fail.
+
+### Fixed
+
+- Three tests (`failsafe.test.ts`) captured raw `console.error` and compared
+  bare messages; the journal's prefix broke them. The capture strips the
+  prefix, so each still asserts what was said rather than how a line is
+  shaped — `Journal.test.ts` owns the shape.
+- `Handover.test.ts` seeded its session without `UNII_DIR`, so the session
+  went to the home directory while the server read the temp store (the same
+  isolation bug CI caught in `Chat.test.ts`, caught here by the test failing
+  with a 401).
+
+### Not done
+
+- **A turn in flight during a handover** is still not tested: no vendor URL is
+  configurable, and adding one to make a test possible would put a way to
+  redirect a user's API key into every deployment. Named in `PLAN.md` as the
+  remaining gap rather than papered over.
+
 ## 1.3.0
 
 ### Added

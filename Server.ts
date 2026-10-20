@@ -29,6 +29,7 @@
 //
 // Usage: Server.ts [port]   (127.0.0.1; default 8788)
 
+import { Journal } from "./Journal.ts";
 import * as fs from "node:fs";
 import * as net from "node:net";
 import type { ServerWebSocket } from "bun";
@@ -341,7 +342,7 @@ export namespace Chat {
     }).finally(() => {
       chat.posts -= 1;
       Chat.change(chat);
-    }).catch((err) => console.error("chat " + acct.user + ": open: " + (err?.message ?? err)));
+    }).catch((err) => Journal.error("chat " + acct.user + ": open: " + (err?.message ?? err)));
     return chat;
   }
 
@@ -759,7 +760,7 @@ export namespace Chat {
       if ((await proc.exited) !== 0) {
         Chat.all(chat, { $: "note", text: "after: " + err.trim() });
       }
-    }).catch((err) => console.error("after: " + (err?.message ?? err))).finally(() => {
+    }).catch((err) => Journal.error("after: " + (err?.message ?? err))).finally(() => {
       chat.posts -= 1;
       Chat.free(chat);
     });
@@ -1669,7 +1670,7 @@ export namespace Main {
     try {
       run();
     } catch (err: any) {
-      console.error("unii: " + what + " failed: " + (err?.stack ?? err));
+      Journal.error("unii: " + what + " failed: " + (err?.stack ?? err));
       fail();
     }
   }
@@ -1816,7 +1817,7 @@ export namespace Main {
         Memory.stop(chat.mem);
       }
     });
-    console.log("unii: " + config.SITE + ", users in " + config.DIR + "/users, worker " + Main.index + " of " + Main.count + " on 127.0.0.1:" + port);
+    Journal.info(config.SITE + ", users in " + config.DIR + "/users, worker " + Main.index + " of " + Main.count + " on 127.0.0.1:" + port);
     send?.({ $: "ready" });
     Main.back?.send({ $: "go", tools: Tools.base() });
     Main.listen(hand);
@@ -1833,7 +1834,7 @@ export namespace Main {
   // it (a chat's note, a log line), so this is a bug, logged, never the
   // end of the worker and every chat it holds
   export function unowned(err: unknown): void {
-    console.error("unii: a failure no one owned: " + ((err as any)?.stack ?? err));
+    Journal.error("unii: a failure no one owned: " + ((err as any)?.stack ?? err));
   }
 
   // a worker hears its supervisor
@@ -1941,7 +1942,7 @@ export namespace Main {
           peer.send({ $: "users", addr: Main.addr, users: [...Chat.chats.keys(), ...Main.coming.keys()] });
           [...Chat.chats.values()].forEach((chat) => Chat.give(chat, peer, msg.tools));
           Main.done();
-        }).catch((err) => console.error("unii: giving the chats failed: " + (err?.stack ?? err)));
+        }).catch((err) => Journal.error("unii: giving the chats failed: " + (err?.stack ?? err)));
         return;
       }
       case "users": {
@@ -2012,7 +2013,7 @@ export namespace Main {
             peer.grants.set(msg.req, grant);
           }
           peer.send(typeof grant === "string" ? { $: "grant", req: msg.req, why: grant } : { $: "grant", req: msg.req, max: grant.max, cut: grant.cut });
-        }).catch((err) => console.error("book " + msg.req + ": " + (err?.message ?? err)));
+        }).catch((err) => Journal.error("book " + msg.req + ": " + (err?.message ?? err)));
         return;
       }
       case "grant": {
@@ -2224,7 +2225,7 @@ export namespace Main {
       process.on(sig, stop);
     }
     process.on("SIGHUP", () => workers.forEach((_, k) => start(k)));
-    console.log("unii: " + config.SITE + ", " + config.WORKERS + " workers on 127.0.0.1:" + (port + 1) + "-" + (port + config.WORKERS) + ", routes on " + port);
+    Journal.info(config.SITE + ", " + config.WORKERS + " workers on 127.0.0.1:" + (port + 1) + "-" + (port + config.WORKERS) + ", routes on " + port);
   }
 
   // a worker ended (`now`: worker k's, the last that started): as the
@@ -2232,7 +2233,7 @@ export namespace Main {
   // k's again; one that never started (none is), the server ends
   export function died(k: number, code: number | null, now: Bun.Subprocess | undefined, proc: Bun.Subprocess, again: () => void): void {
     if (code !== 0) {
-      console.error("unii: worker " + k + " ended (" + code + ")");
+      Journal.error("unii: worker " + k + " ended (" + code + ")");
     }
     if (Main.leaving || (now !== undefined && now !== proc)) {
       return;

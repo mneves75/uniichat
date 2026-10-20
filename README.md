@@ -105,6 +105,14 @@ the case a substring search cannot win (a question whose words never appear
 together in the log). `--check` fails below 95% recall or staleness, or above
 300 ms, and CI runs it. It calls no vendor.
 
+The server's own words go to stderr as `unii: <level>: <what>`, or as one
+JSON object a line (`{ at, level, what }`) with `UNII_LOG=json`, for a
+collector. A message a person should read is the chat's (`Chat.note`), never
+the log: the log speaks of the server's account, the model's health and a
+store's files. Rotation belongs to whatever starts the process
+(`unii serve 2>> unii.log` under `newsyslog`, `logrotate`, or a container
+runtime): a process cannot safely rename its own open stderr.
+
 `/health` answers what an operator watches, signed out and naming nobody:
 `{ ok, worker, of, chats, sockets, backlog, calls, up }`, where `backlog`
 is the summaries not built yet (the number that grows during an import).

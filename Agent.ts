@@ -31,6 +31,7 @@
 // cut. A paid request is booked first (worst, Bill: AskAI.ts), then takes
 // its place in single flight (AskAI.wait).
 
+import { Journal } from "./Journal.ts";
 import { AskAI, type Grant, type Cost, type Ask, type Block, type Flight, type Try, type End, type Event, type Img, type Kind, type Say } from "./AskAI.ts";
 import { Anthropic } from "./Anthropic.ts";
 import { OpenAI } from "./OpenAI.ts";
@@ -312,7 +313,7 @@ export namespace Agent {
         }
         const { res, step } = got;
         if (step.stop === "down") {
-          console.error(model + ": " + step.why.slice(0, 300));
+          Journal.error(model + ": " + step.why.slice(0, 300));
         }
         if (step.stop !== "busy" || k >= TRIES) {
           return step.stop === "busy" ? { ...step, stop: "down" } : step;
@@ -346,7 +347,7 @@ export namespace Agent {
   // import's; the model's first says why
   export function hold(model: string, own: string, why: string): void {
     if (Agent.room(model).asking++ === 0) {
-      console.error(model + ": " + why.slice(0, 300) + ": its requests ask again");
+      Journal.error(model + ": " + why.slice(0, 300) + ": its requests ask again");
     }
     Agent.room(own).busy += 1;
   }
@@ -359,7 +360,7 @@ export namespace Agent {
       room.wait.splice(0).forEach((ok) => ok());
     }
     if (--Agent.room(model).asking === 0) {
-      console.error(model + ": none asks again");
+      Journal.error(model + ": none asks again");
     }
     for (const key of [own, model]) {
       if (ROOMS.get(key)?.busy === 0 && ROOMS.get(key)?.asking === 0) {

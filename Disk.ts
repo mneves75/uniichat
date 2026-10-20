@@ -12,6 +12,7 @@ import { Database } from "bun:sqlite";
 import * as fs from "node:fs";
 import type { FileSink } from "bun";
 import * as config from "./Config.ts";
+import { Journal } from "./Journal.ts";
 
 // Types
 // =====
@@ -65,7 +66,7 @@ export namespace Disk {
       const waits = WAITS;
       DIRTY.clear();
       WAITS = [];
-      await Disk.flush(files).catch((err: Error) => console.error("disk: a flush failed: " + err.message));
+      await Disk.flush(files).catch((err: Error) => Journal.error("disk: a flush failed: " + err.message));
       waits.forEach((ok) => ok());
     }
     RUN = null;

@@ -18,6 +18,7 @@ import * as path from "node:path";
 import { Billing } from "./Billing.ts";
 import * as config from "./Config.ts";
 import { Disk } from "./Disk.ts";
+import { Journal } from "./Journal.ts";
 
 // Types
 // =====
@@ -309,12 +310,12 @@ export namespace Cloud {
       let out = "";
       req.setEncoding("utf8");
       req.on("data", (got) => (out += got));
-      req.on("error", (err) => console.error("push: " + err.message));
+      req.on("error", (err) => Journal.error("push: " + err.message));
       req.on("end", () => {
         if (/Unregistered|BadDeviceToken/.test(out)) {
           cloud.db.query("delete from pushes where token = ?").run(token);
         } else if (out !== "") {
-          console.error("push: " + out);
+          Journal.error("push: " + out);
         }
       });
       req.end(body);
@@ -326,7 +327,7 @@ export namespace Cloud {
   export function apns(): http2.ClientHttp2Session {
     if (PUSH.link === null || PUSH.link.closed || PUSH.link.destroyed) {
       const link = (PUSH.link = http2.connect("https://api.push.apple.com"));
-      link.on("error", (err) => console.error("push: " + err.message));
+      link.on("error", (err) => Journal.error("push: " + err.message));
       link.on("close", () => PUSH.link === link && (PUSH.link = null));
     }
     if (Date.now() - PUSH.at > PUSH_AGE) {
@@ -522,7 +523,7 @@ export namespace Cloud {
 
   export async function mail(cloud: Cloud, to: string, link: string, terminal: boolean): Promise<void> {
     if (!config.KEYS.resend) {
-      console.log("sign-in link for " + to + ": " + link);
+      Journal.info("sign-in link for " + to + ": " + link);
       return;
     }
     const ignore = terminal ? "This link signs a unii terminal into your account. If you didn't just start one, ignore this email." : "If you didn't ask for it, ignore this email.";

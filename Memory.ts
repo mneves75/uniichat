@@ -49,6 +49,7 @@
 // other line is read by its index. Images are in docs/images/ by their
 // hash; an agent's log in docs/agent/<Name>.jsonl.
 
+import { Journal } from "./Journal.ts";
 import * as fs from "node:fs";
 import { AskAI, type Ask, type Bill, type Block, type Call, type Img, type Kind, type Pay, type Say, type Served } from "./AskAI.ts";
 import { clip_page, clip_pages } from "./Clip.ts";
@@ -258,7 +259,7 @@ export namespace Memory {
     } catch {
       const at = dir + "/view.json.bad-" + Date.now();
       fs.renameSync(dir + "/view.json", at);
-      console.error("view.json of " + dir + " was unreadable: kept as " + at);
+      Journal.error("view.json of " + dir + " was unreadable: kept as " + at);
       return { kept: null, bad: true };
     }
   }
@@ -318,7 +319,7 @@ export namespace Memory {
       k = nl + 1;
     }
     if (k < data.length) {
-      console.error("skipped the last line of " + file + ": cut short");
+      Journal.error("skipped the last line of " + file + ": cut short");
       fs.appendFileSync(file, "\n");
       return at + data.length + 1;
     }
@@ -404,7 +405,7 @@ export namespace Memory {
       return JSON.parse(line);
     } catch {
       if (line !== "") {
-        console.error("skipped a line of " + file + ": not JSON");
+        Journal.error("skipped a line of " + file + ": not JSON");
       }
       return null;
     }
@@ -776,7 +777,7 @@ export namespace Memory {
       Memory.pump(mem);
       Memory.fit(mem);
     }).catch((err) => {
-      console.error("compactor: node " + l + "/" + i + ": " + (err?.message ?? err));
+      Journal.error("compactor: node " + l + "/" + i + ": " + (err?.message ?? err));
     });
   }
 
@@ -837,7 +838,7 @@ export namespace Memory {
       throw new Error(end.text);
     }
     if (lines.length === 0) {
-      console.error("compactor: node " + l + "/" + i + ": " + (end.ok ? "an empty line" : end.text) + "; clipped");
+      Journal.error("compactor: node " + l + "/" + i + ": " + (end.ok ? "an empty line" : end.text) + "; clipped");
     }
     const line = lines.length === 0 ? Memory.cut(Memory.flat(text)) : lines.reduce((a, b) => (Memory.bytes(b) < Memory.bytes(a) ? b : a));
     Memory.store(mem, [{ l, i, text: line }]);

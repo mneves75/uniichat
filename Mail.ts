@@ -5,6 +5,8 @@
 // request at a time (its 429 says when to come back). A batch refused as
 // invalid goes again in halves, so a bad address fails only itself.
 
+import { Journal } from "./Journal.ts";
+
 // Types
 // =====
 
@@ -51,7 +53,7 @@ export namespace Mail {
         await Mail.post(key, QUEUE.splice(0, BATCH));
       }
     } catch (err: any) {
-      console.error("mail: " + (err?.message ?? err));
+      Journal.error("mail: " + (err?.message ?? err));
     } finally {
       RUN = false;
     }

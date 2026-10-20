@@ -96,6 +96,22 @@ export namespace Disk {
     }
   }
 
+  // a one-shot command (Doctor, Backup, Gc, the bench) ends the shell it
+  // started for syncfs: on Linux it is a child process that keeps the
+  // runtime alive, so such a command never exits without this. A server
+  // never calls it: it flushes for as long as it runs.
+  export function quit(): void {
+    try {
+      SHELL?.stdin?.end();
+    } catch {
+      // a shell that already ended needs nothing
+    }
+    SHELL = null;
+    RUN = null;
+    DIRTY.clear();
+    WAITS.splice(0).forEach((ok) => ok());
+  }
+
   export function shell(): Shell {
     const run = 'while read _; do sync -f "$0"; echo $?; done';
     const proc = Bun.spawn(["sh", "-c", run, config.DIR], { stdin: "pipe", stdout: "pipe", stderr: "inherit" });

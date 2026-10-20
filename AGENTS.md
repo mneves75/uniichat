@@ -48,6 +48,9 @@ means changing its spec, its `Call.ts` line, its `Theme.ts` glyph, its
   the home directory: `Chat.test.ts` sets `UNII_DIR` before its first import
   because `Cloud.open` reads `config.DIR` at import, and on a CI runner there
   is no `~/.unii` (the run failed with `SQLITE_CANTOPEN` while passing here).
+- **A one-shot command ends with `Disk.quit()`**: on Linux `Disk` keeps a
+  `sh` for `syncfs` and that child keeps the runtime alive, so a CLI that only
+  sets `process.exitCode` never returns to the shell.
 - **Two renderers, one golden each**: `Render.test.ts` snapshots the site's
   markup and the terminal's text for every message kind. A style change moves
   a snapshot on purpose; that is what the file is for. Re-record with

@@ -14,6 +14,7 @@
 // server still running can be collected safely. Nothing else is touched.
 
 import * as fs from "node:fs";
+import { Disk } from "./Disk.ts";
 import { Memory } from "./Memory.ts";
 
 const IMAGE = /^[0-9a-f]{16}\.[a-z]+(\.jpg)?$/;
@@ -46,4 +47,9 @@ function main(): number {
   return 0;
 }
 
-process.exitCode = main();
+const code = main();
+process.exitCode = code;
+// the shell Disk kept for syncfs is the only thing that would hold the
+// process open now; if something else does, two seconds is enough
+Disk.quit();
+setTimeout(() => process.exit(code), 2000).unref();

@@ -23,6 +23,11 @@
 
 ### Fixed
 
+- **A one-shot command never exited on Linux.** `Disk` keeps a `sh` alive for
+  `syncfs` (Bun has no `syncfs`), and nothing ended it, so `Doctor`, `Backup`,
+  `Gc` and the bench hung after printing. `Disk.quit()` ends it, and each
+  command lets the runtime drain (with a two-second unref'd guard). Found by CI
+  hanging on the new retrieval step — on macOS the shell is never started.
 - **`Chat.test.ts` depended on the runner's home directory**: `Cloud.open`
   reads `UNII_DIR` at import, so on a machine with no `~/.unii` the suite
   failed with `SQLITE_CANTOPEN` while passing locally. `UNII_DIR` is now set

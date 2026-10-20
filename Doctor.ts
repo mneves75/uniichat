@@ -12,6 +12,7 @@
 
 import * as fs from "node:fs";
 import * as config from "./Config.ts";
+import { Disk } from "./Disk.ts";
 import { Memory } from "./Memory.ts";
 
 function dirs(named: string | undefined): string[] {
@@ -70,4 +71,9 @@ function main(): number {
   return faults === 0 ? 0 : 1;
 }
 
-process.exitCode = main();
+const code = main();
+process.exitCode = code;
+// the shell Disk kept for syncfs is the only thing that would hold the
+// process open now; if something else does, two seconds is enough
+Disk.quit();
+setTimeout(() => process.exit(code), 2000).unref();

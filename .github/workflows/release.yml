@@ -55,6 +55,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/* \
+          # a beta (v1.2.3-beta1) is a prerelease: staging, in this repo's terms
+          PRE=""
+          case "$GITHUB_REF_NAME" in *-*) PRE="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/* $PRE \
             --title "$GITHUB_REF_NAME" \
             --notes "unii $GITHUB_REF_NAME. Binaries and the installer carry their sha256: \`unii update\` refuses an installer that does not match the checksum published beside it."

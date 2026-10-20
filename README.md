@@ -68,6 +68,7 @@ Other commands:
     bun run test                     # the tests, each file on its own
     bun run web                      # rebuilds web/app.js from web/src
     bun Doctor.ts                    # reads every chat's files and says what is wrong
+    bun bench/recall.ts              # recall, staleness, paging and p95, on a synthetic chat
     bun Backup.ts save <chat> <to>    # a checked snapshot of a chat's store
     bun Gc.ts <chat> [--apply]        # the images no message names
     bun build --compile Term.ts --outfile unii
@@ -95,6 +96,14 @@ explained rather than guessed at.
 the one the server publishes at `/install.sh.sha256`; a server that publishes
 none is refused unless `UNII_TRUST_UNVERIFIED=1`. `v*` tags build the four
 `unii` binaries and publish them with their checksums (`.github/workflows/release.yml`).
+
+`bun bench/recall.ts [--check]` builds a 4,000-message chat with 40 facts,
+each later corrected, and reports what retrieval does on it: recall@5,
+whether `newest` answers with the correction, whether the newest mention of a
+common word is reachable at all (the reason `newest` exists), the p95, and
+the case a substring search cannot win (a question whose words never appear
+together in the log). `--check` fails below 95% recall or staleness, or above
+300 ms, and CI runs it. It calls no vendor.
 
 `/health` answers what an operator watches, signed out and naming nobody:
 `{ ok, worker, of, chats, sockets, backlog, calls, up }`, where `backlog`

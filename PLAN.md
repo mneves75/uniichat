@@ -9,8 +9,8 @@
 > **Where it is:** committed and pushed to the fork `mneves75/uniichat` (the
 > upstream `VictorTaelin/UniiChat` is not mine to push to); not merged upstream,
 > not tagged, not deployed.
-> **Not done:** C6 (render goldens), C7 (wire replay), D1 (structured logs), D3 (handover under
-> load), E2 (recall harness), E4 (iOS decision). The advisor's ordering puts C6 and E2 first:
+> **Not done:** D1 (structured logs), D3 (handover under load). C6 (render goldens), C7 (wire
+> replay), E2 (recall harness) and E4 (iOS decision, ADR 0001) landed in 1.3.0. The advisor's ordering puts C6 and E2 first:
 > C6 guards the CSS surface, E2 guards any further prompt revision. §9's "the prompt already
 > says the latest word wins" is corrected there.
 

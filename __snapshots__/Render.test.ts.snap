@@ -1,0 +1,133 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`the site's markup: one golden per message kind 1`] = `
+"user #1
+<div class="msg user" data-a="1"><button class="copy" data-copy="make the landing page faster: **LCP** under 2.5 s, and keep it readable" title="Copy"><svg viewBox="0 0 16 16" width="15" height="15"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 3.5v-.2A1.8 1.8 0 0 0 8.7 1.5H4.3A1.8 1.8 0 0 0 2.5 3.3v4.4a1.8 1.8 0 0 0 1.8 1.8h.2"/></svg></button><p>make the landing page faster: **LCP** under 2.5 s, and keep it readable</p></div>
+
+unii #2
+<div class="msg unii" data-a="2"><button class="copy" data-copy="Three things, in order:
+
+1. defer the blocking script
+2. serve the images as WebP
+3. re-measure
+
+&gt; Lighthouse 62 → 90 on the same build
+
+\`\`\`js
+const x = await measure();
+\`\`\`" title="Copy"><svg viewBox="0 0 16 16" width="15" height="15"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 3.5v-.2A1.8 1.8 0 0 0 8.7 1.5H4.3A1.8 1.8 0 0 0 2.5 3.3v4.4a1.8 1.8 0 0 0 1.8 1.8h.2"/></svg></button><p>Three things, in order:</p><ol><li>defer the blocking script</li><li>serve the images as WebP</li><li>re-measure</li></ol><blockquote><p>Lighthouse 62 → 90 on the same build</p></blockquote><pre><button class="copy" data-copy="const x = await measure();" title="Copy"><svg viewBox="0 0 16 16" width="15" height="15"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 3.5v-.2A1.8 1.8 0 0 0 8.7 1.5H4.3A1.8 1.8 0 0 0 2.5 3.3v4.4a1.8 1.8 0 0 0 1.8 1.8h.2"/></svg></button><span class="lang">js</span><code>const x = await measure();</code></pre></div>
+
+tool #3
+<div class="msg tool" data-a="3"><button class="copy" data-copy="shell npx lighthouse http://localhost:3000 --quiet" title="Copy"><svg viewBox="0 0 16 16" width="15" height="15"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 3.5v-.2A1.8 1.8 0 0 0 8.7 1.5H4.3A1.8 1.8 0 0 0 2.5 3.3v4.4a1.8 1.8 0 0 0 1.8 1.8h.2"/></svg></button><p class="call"><span class="ic">⌨️</span><b>shell</b> npx lighthouse http://localhost:3000 --quiet</p></div>
+
+echo #4
+<div class="msg echo" data-a="4"><button class="copy" data-copy="result: performance 62 · accessibility 91 · 1.2 MB of JPEG
+
+--- a/web/index.html
++++ b/web/index.html
+@@ -1,2 +1,2 @@
+-&lt;script src=&quot;/app.js&quot;&gt;&lt;/script&gt;
++&lt;script src=&quot;/app.js&quot; defer&gt;&lt;/script&gt;" title="Copy"><svg viewBox="0 0 16 16" width="15" height="15"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 3.5v-.2A1.8 1.8 0 0 0 8.7 1.5H4.3A1.8 1.8 0 0 0 2.5 3.3v4.4a1.8 1.8 0 0 0 1.8 1.8h.2"/></svg></button><pre class="diff" style="--nw:1ch"><span class="lang">result</span><code><span class="file"><i>1</i>result: performance 62 · accessibility 91 · 1.2 MB of JPEG</span><span class="file"><i>2</i></span><span class="file"><i>3</i>--- a/web/index.html</span><span class="file"><i>4</i>+++ b/web/index.html</span><span class="file"><i>5</i>@@ -1,2 +1,2 @@</span><span class="file"><i>6</i>-&lt;script src=&quot;/app.js&quot;&gt;&lt;/script&gt;</span><span class="file"><i>7</i>+&lt;script src=&quot;/app.js&quot; defer&gt;&lt;/script&gt;</span></code></pre></div>
+
+tool #5
+<div class="msg tool" data-a="5"><button class="copy" data-copy="edit web/index.html, web/style.css" title="Copy"><svg viewBox="0 0 16 16" width="15" height="15"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 3.5v-.2A1.8 1.8 0 0 0 8.7 1.5H4.3A1.8 1.8 0 0 0 2.5 3.3v4.4a1.8 1.8 0 0 0 1.8 1.8h.2"/></svg></button><p class="call"><span class="ic">📝</span><b>edit</b> web/index.html, web/style.css</p></div>
+
+tool #6
+<div class="msg tool" data-a="6"><button class="copy" data-copy="search deploy port · newest first" title="Copy"><svg viewBox="0 0 16 16" width="15" height="15"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 3.5v-.2A1.8 1.8 0 0 0 8.7 1.5H4.3A1.8 1.8 0 0 0 2.5 3.3v4.4a1.8 1.8 0 0 0 1.8 1.8h.2"/></svg></button><p class="call"><span class="ic">🔎</span><b>search</b> deploy port · newest first</p></div>
+
+tool #7
+<div class="msg tool" data-a="7"><button class="copy" data-copy="zoom #6243+4" title="Copy"><svg viewBox="0 0 16 16" width="15" height="15"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 3.5v-.2A1.8 1.8 0 0 0 8.7 1.5H4.3A1.8 1.8 0 0 0 2.5 3.3v4.4a1.8 1.8 0 0 0 1.8 1.8h.2"/></svg></button><p class="call"><span class="ic">🔍</span><b>zoom</b> #6243+4</p></div>
+
+work #8
+<div class="msg work" data-a="8" data-who="FireAnt"><button class="copy" data-copy="[FireAnt]
+done: the image set is WebP, 480 KB → 96 KB" title="Copy"><svg viewBox="0 0 16 16" width="15" height="15"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 3.5v-.2A1.8 1.8 0 0 0 8.7 1.5H4.3A1.8 1.8 0 0 0 2.5 3.3v4.4a1.8 1.8 0 0 0 1.8 1.8h.2"/></svg></button><p>done: the image set is WebP, 480 KB → 96 KB</p></div>
+
+mind #9
+<div class="msg mind" data-a="9"><button class="copy" data-copy="the largest file is the hero; it can be resized before conversion" title="Copy"><svg viewBox="0 0 16 16" width="15" height="15"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 3.5v-.2A1.8 1.8 0 0 0 8.7 1.5H4.3A1.8 1.8 0 0 0 2.5 3.3v4.4a1.8 1.8 0 0 0 1.8 1.8h.2"/></svg></button><p>the largest file is the hero; it can be resized before conversion</p></div>
+
+note #10
+<div class="msg note" data-a="10" data-who="Note"><button class="copy" data-copy="An import is paused: its credit ran out." title="Copy"><svg viewBox="0 0 16 16" width="15" height="15"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 3.5v-.2A1.8 1.8 0 0 0 8.7 1.5H4.3A1.8 1.8 0 0 0 2.5 3.3v4.4a1.8 1.8 0 0 0 1.8 1.8h.2"/></svg></button><p>An import is paused: its credit ran out.</p></div>
+
+unii #11
+<div class="msg unii" data-a="11"><button class="copy" data-copy="| step | before | after |
+|---|---|---|
+| LCP | 4.1 s | 1.9 s |
+| size | 1.2 MB | 210 KB |" title="Copy"><svg viewBox="0 0 16 16" width="15" height="15"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 3.5v-.2A1.8 1.8 0 0 0 8.7 1.5H4.3A1.8 1.8 0 0 0 2.5 3.3v4.4a1.8 1.8 0 0 0 1.8 1.8h.2"/></svg></button><table><tr><th>step</th><th>before</th><th>after</th></tr><tr><td>LCP</td><td>4.1 s</td><td>1.9 s</td></tr><tr><td>size</td><td>1.2 MB</td><td>210 KB</td></tr></table></div>
+
+unii #12
+"
+`;
+
+exports[`the terminal's text at 80 columns: one golden per message kind 1`] = `
+"user #1
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ make the landing page faster: **LCP** under 2.5 s, and keep it readable      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+unii #2
+Three things, in order:
+
+1. defer the blocking script
+2. serve the images as WebP
+3. re-measure
+
+│ Lighthouse 62 → 90 on the same build
+
+js
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+ const x = await measure();                                                     
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+tool #3
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+ ⌨️ shell npx lighthouse http://localhost:3000 --quiet                          
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+echo #4
+╭─ result ─────────────────────────────────────────────────────────────────────╮
+│ 1 result: performance 62 · accessibility 91 · 1.2 MB of JPEG                 │
+│ 2                                                                            │
+│ 3 --- a/web/index.html                                                       │
+│ 4 +++ b/web/index.html                                                       │
+│ 5 @@ -1,2 +1,2 @@                                                            │
+│ 6 -<script src="/app.js"></script>                                           │
+│ 7 +<script src="/app.js" defer></script>                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+tool #5
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+ 📝 edit web/index.html, web/style.css                                          
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+tool #6
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+ 🔎 search deploy port · newest first                                           
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+tool #7
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+ 🔍 zoom #6243+4                                                                
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+work #8
+╭─ FireAnt ────────────────────────────────────────────────────────────────────╮
+│ done: the image set is WebP, 480 KB → 96 KB                                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+mind #9
+the largest file is the hero; it can be resized before conversion
+
+note #10
+Note
+An import is paused: its credit ran out.
+
+unii #11
+step  before  after   
+────────────────────
+LCP   4.1 s   1.9 s   
+────────────────────
+size  1.2 MB  210 KB  
+
+unii #12
+"
+`;

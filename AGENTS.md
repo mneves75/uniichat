@@ -44,7 +44,14 @@ means changing its spec, its `Call.ts` line, its `Theme.ts` glyph, its
   `mem.hold` (both sides) so the store is tested without one, or replays a
   fake stream. A test that needs a network is a test that will fail in CI.
 - **`bun test --isolate`**: every test file starts processes and opens
-  stores of its own, under `mkdtemp`, and removes them.
+  stores of its own, under `mkdtemp`, and removes them. A test may not read
+  the home directory: `Chat.test.ts` sets `UNII_DIR` before its first import
+  because `Cloud.open` reads `config.DIR` at import, and on a CI runner there
+  is no `~/.unii` (the run failed with `SQLITE_CANTOPEN` while passing here).
+- **Two renderers, one golden each**: `Render.test.ts` snapshots the site's
+  markup and the terminal's text for every message kind. A style change moves
+  a snapshot on purpose; that is what the file is for. Re-record with
+  `bun test --update-snapshots Render.test.ts` and read the diff.
 - **No panic on input.** Acts arrive from any client: a field that is
   missing is refused with a message (`goal`), never `String(undefined)`.
 - **`web/style.css` has its own test** (`Style.test.ts`): a custom property

@@ -12,11 +12,24 @@
 
 import { afterAll, expect, test } from "bun:test";
 import * as fs from "node:fs";
-import { Cloud } from "./Cloud.ts";
-import { Memory, type Share } from "./Memory.ts";
-import { Chat } from "./Server.ts";
+import type { Share } from "./Memory.ts";
 
-const DIRS: string[] = [];
+// A store of its own, set before anything of the server's is imported:
+// Cloud.open reads config.DIR, which is UNII_DIR at import, and a test must
+// never touch the one in the home directory. On a CI runner there is none,
+// and this file failed there with SQLITE_CANTOPEN while passing here.
+const ROOT = fs.mkdtempSync("/tmp/unii-chat-root-");
+process.env.UNII_DIR = ROOT;
+process.env.UNII_SITE = "http://127.0.0.1";
+
+const { Cloud } = await import("./Cloud.ts");
+const { Memory } = await import("./Memory.ts");
+const { Chat } = await import("./Server.ts");
+
+// what Memory.load gives back
+type Mem = ReturnType<typeof Memory.load>;
+
+const DIRS: string[] = [ROOT];
 
 afterAll(() => DIRS.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
 
@@ -25,7 +38,7 @@ const share = (): Share => ({ vendor: "claude-api", model: "sonnet", effort: "me
 // a chat with a real store and a real (empty) account store, held so no
 // summary is ever asked for: enough for an act that only sets state
 function chat_new() {
-  const dir = fs.mkdtempSync("/tmp/unii-chat-test-");
+  const dir = fs.mkdtempSync(ROOT + "/chat-");
   DIRS.push(dir);
   const cloud = Cloud.open(() => {}, () => {}, async () => null);
   const mem = Memory.load(dir, share);
@@ -68,7 +81,7 @@ test("an act with no goal text is refused, and the chat's goal is left as it was
 test("a turn that moved before its first message was logged bills nothing", () => {
   const billed: string[] = [];
   // only `pay` is read by Chat.billed: a wallet, not a store
-  const mem = { pay: (_kind: string, what: string) => (billed.push(what), () => Promise.resolve({ max: 0, cut: null, end: () => {} })) } as unknown as Memory;
+  const mem = { pay: (_kind: string, what: string) => (billed.push(what), () => Promise.resolve({ max: 0, cut: null, end: () => {} })) } as unknown as Mem;
   expect(Chat.billed(mem, [])).toBeUndefined();
   expect(billed).toEqual([]);
   // and one with a message bills that message, as before

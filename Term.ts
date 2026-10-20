@@ -64,7 +64,7 @@ type Cmd = [use: string, keys: string, text: string, run: (t: Term, arg: string)
 
 // this unii's version: each release ships one, a new one for every
 // change to Term.ts or what it imports
-const VERSION = "1.2.0";
+const VERSION = "1.3.0";
 
 const ARGS   = process.argv.slice(2);
 const LOGIN  = ARGS.includes("login");

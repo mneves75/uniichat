@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.3.0
+
+### Added
+
+- **A recall harness** (`bun bench/recall.ts [--check]`, run by CI): a
+  4,000-message synthetic chat with 40 facts, each later corrected. Measured
+  here: recall@5 **100%**, newest-first answers the correction **100%**, the
+  newest mention of a common word is reachable **yes**, search p95 **1.4 ms**,
+  and the honest gap — a question whose words never appear together gets
+  **0 hits**. `--check` fails below 95% recall/staleness or above 300 ms.
+- **Render goldens** (`Render.test.ts`, `__snapshots__/`): the site's markup
+  and the terminal's text for every message kind, so `Call.ts` and the CSS
+  surface have a gate that fails on purpose.
+- **Wire replay** (`Wire.test.ts`): both vendors' streams, event by event —
+  text in pieces, a tool call whose JSON arrives in pieces, `pause_turn`,
+  refusals, incomplete responses, error events, and a cut stream. A malformed
+  stream ends as a typed failure, never a throw.
+- **ADR 0001**: the iOS app stays a shell (push, StoreKit, share, mic), what
+  that saves, and the App Store 4.2 risk it accepts.
+- CI runs the retrieval harness; a `-beta` tag publishes a **prerelease**.
+
+### Fixed
+
+- **`Chat.test.ts` depended on the runner's home directory**: `Cloud.open`
+  reads `UNII_DIR` at import, so on a machine with no `~/.unii` the suite
+  failed with `SQLITE_CANTOPEN` while passing locally. `UNII_DIR` is now set
+  before the first import, and AGENTS.md says why. (Caught by CI on the fork —
+  the first time the gate ran in an environment that is not this laptop.)
+
 ## 1.2.0
 
 ### Added
